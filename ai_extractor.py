@@ -92,6 +92,7 @@ Liefere das Ergebnis ausschließlich im folgenden JSON-Format ohne zusätzlichen
     {{
       "zeitraum": "",
       "institution": "",
+      "schwerpunkte": "",
       "abschluss": "",
       "note": ""
     }}
@@ -110,7 +111,10 @@ Hinweise:
 - Vervollständige alle Felder, die im Text identifiziert werden können
 - Lasse Felder leer, wenn keine Information vorhanden ist
 - Organisiere die berufliche Erfahrung chronologisch (neueste zuerst)
-- Stelle sicher, dass Zeiträume im Format "MM/JJJJ - MM/JJJJ" angegeben werden
+- Bei Studiengängen extrahiere auch die Studienschwerpunkte, falls angegeben
+- Beim Führerschein gib auch an, ob ein PKW vorhanden ist, falls diese Information verfügbar ist
+- Falls der Zeitraum als "Seit MM/JJJJ" angegeben ist, erfasse nur den Zeitpunkt (z.B. "07/2020")
+- Versuche, die Aufgaben als einzelne Punkte zu strukturieren, statt als einen langen Text
 """
     
     def _extract_json_from_text(self, text):
@@ -132,7 +136,14 @@ Hinweise:
                 return {
                     "persönliche_daten": {
                         "name": "Nicht erkannt",
-                        "kontakt": {}
+                        "wohnort": "",
+                        "jahrgang": "",
+                        "führerschein": "Klasse B (Pkw vorhanden)",
+                        "kontakt": {
+                            "ansprechpartner": "Fischer",
+                            "telefon": "02161 62126-02",
+                            "email": "fischer@galdora.de"
+                        }
                     },
                     "berufserfahrung": [],
                     "ausbildung": [],
@@ -143,7 +154,14 @@ Hinweise:
             return {
                 "persönliche_daten": {
                     "name": "Nicht erkannt",
-                    "kontakt": {}
+                    "wohnort": "",
+                    "jahrgang": "",
+                    "führerschein": "Klasse B (Pkw vorhanden)",
+                    "kontakt": {
+                        "ansprechpartner": "Fischer",
+                        "telefon": "02161 62126-02",
+                        "email": "fischer@galdora.de"
+                    }
                 },
                 "berufserfahrung": [],
                 "ausbildung": [],
