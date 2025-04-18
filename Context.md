@@ -11,6 +11,7 @@ Diese Anwendung ist ein leistungsstarker CV-Parser, der Lebensläufe automatisch
 - **KI-gestützte Analyse**: Nutzung von OpenAI-Modellen zur Identifizierung von Schlüsselinformationen
 - **Strukturierte Profilerstellung**: Generierung standardisierter Profile im PDF-Format
 - **Benutzerfreundliche Oberfläche**: Einfache Handhabung durch Streamlit-Frontend
+- **Benutzerverwaltete Einstellungen**: Speichern von Voreinstellungen wie API-Keys und bevorzugten Templates
 
 ## Technische Komponenten
 
@@ -36,6 +37,11 @@ Die Anwendung besteht aus mehreren Modulen:
    - Upload-Funktion für Dokumente
    - Bearbeitungsmöglichkeiten für extrahierte Daten
    - Download-Option für generierte Profile
+
+5. **config.py** (NEU in v2): Verwaltung von Benutzereinstellungen
+   - Speichert den OpenAI API-Key sicher im Benutzerverzeichnis
+   - Verwaltet benutzerdefinierte Einstellungen wie Template-Voreinstellungen
+   - Ermöglicht das Anpassen von Optionen wie Textanzeige und Anonymisierung
 
 ## Anwendungsfälle
 
@@ -72,10 +78,37 @@ Die Anwendung besteht aus mehreren Modulen:
 
 ## Beispielhafte Nutzung
 
-1. OpenAI API-Schlüssel in der Seitenleiste eingeben
+1. OpenAI API-Schlüssel in der Seitenleiste eingeben (kann für spätere Verwendung gespeichert werden)
 2. Lebenslauf hochladen (PDF, DOCX, JPG oder PNG)
 3. Extrahierte Daten überprüfen und bei Bedarf bearbeiten
-4. Profil generieren und herunterladen
+4. Template auswählen (kann als Standard gespeichert werden)
+5. Optional: Anonymisieren der persönlichen Daten aktivieren
+6. Profil generieren und herunterladen
+
+## Aktuelle Version (v2)
+
+Die aktuelle Version (v2) enthält folgende Verbesserungen:
+
+- **API-Key-Verwaltung**: Der OpenAI API-Key wird sicher in `~/.cv2profile/settings.json` gespeichert
+- **Benutzerverwaltete Einstellungen**: 
+  - Auswahl des Standard-Templates (Klassisch, Modern, Professionell, Minimalistisch)
+  - Option zur Anonymisierung der Daten
+  - Option zur Anzeige des extrahierten Textes
+- **Verbesserte Benutzeroberfläche**:
+  - Hervorhebung des ausgewählten Standard-Templates
+  - Speichern von bevorzugten Templates für zukünftige Verwendung
+  - Eindeutige Schlüssel für Checkbox-Widgets zur Vermeidung von Konflikten
+- **Datenschutz und Sicherheit**: 
+  - Alle Einstellungen werden sicher im Benutzerverzeichnis gespeichert
+  - Keine Datenübertragung außerhalb des Computers des Benutzers
+  - Umgebungsvariablen haben Vorrang, wenn ein API-Key gesetzt ist
+
+## Bekannte Probleme in v2
+
+- Fehler bei der PDF-Vorschau: In Schritt 3 kann es zu einem Fehler kommen, wenn `st.session_state.preview_pdf` den Wert `None` hat
+- Der Fehler tritt auf in der Funktion `display_pdf()` in Zeile 48 der app.py
+- Fehlermeldung: `TypeError: expected str, bytes or os.PathLike object, not NoneType`
+- Eine Überprüfung auf `None` sollte implementiert werden, bevor versucht wird, die Datei zu öffnen
 
 ## Aktuelle Grenzen und zukünftige Erweiterungen
 
@@ -83,10 +116,12 @@ Die Anwendung besteht aus mehreren Modulen:
 - Erweiterung um mehrsprachige Unterstützung geplant
 - Verbesserung der KI-Extraktion durch Feintuning geplant
 - Integration mit ATS (Applicant Tracking Systems) möglich
+- Behebung des PDF-Vorschau-Fehlers für die nächste Version geplant
 
 ## Datenschutz und Sicherheit
 
 - Lokale Verarbeitung der Dokumente
 - Temporäre Dateien werden nach der Verarbeitung gelöscht
 - Nur für die KI-Analyse werden Daten an OpenAI übertragen (gemäß deren Datenschutzrichtlinien)
-- Keine dauerhafte Speicherung von Bewerberdaten in der Anwendung 
+- Keine dauerhafte Speicherung von Bewerberdaten in der Anwendung
+- OpenAI API-Keys werden sicher im Benutzerverzeichnis gespeichert 
