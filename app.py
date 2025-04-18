@@ -54,19 +54,18 @@ def display_pdf(file_path):
         with open(file_path, "rb") as f:
             base64_pdf = base64.b64encode(f.read()).decode('utf-8')
         
-        # Verbesserte PDF-Anzeige mit zusätzlichen Parametern für bessere Darstellung
+        # Alternative PDF-Anzeige, die besser mit Chrome-Sicherheitsrichtlinien kompatibel ist
         pdf_display = f'''
         <div style="display: flex; justify-content: center; width: 100%; margin: 0 auto; border: 1px solid #ddd; border-radius: 5px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-            <iframe 
-                src="data:application/pdf;base64,{base64_pdf}" 
-                width="100%" 
-                height="800" 
+            <object 
+                data="data:application/pdf;base64,{base64_pdf}" 
                 type="application/pdf"
-                style="border: none;"
-                frameborder="0"
-                scrolling="auto"
-                allowfullscreen
-            ></iframe>
+                width="100%" 
+                height="800"
+                style="border: none;">
+                <p>Ihr Browser kann PDFs nicht anzeigen. 
+                <a href="data:application/pdf;base64,{base64_pdf}" download="dokument.pdf">Klicken Sie hier, um das PDF herunterzuladen</a>.</p>
+            </object>
         </div>
         '''
         return pdf_display
@@ -575,6 +574,22 @@ elif st.session_state.step == 3:
     st.markdown("### Vorschau")
     st.components.v1.html(display_pdf(st.session_state.preview_pdf), height=850)
     
+    # Alternative PDF-Anzeige
+    if st.session_state.preview_pdf and os.path.exists(st.session_state.preview_pdf):
+        st.markdown("#### Falls die PDF-Vorschau nicht angezeigt wird:")
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            with open(st.session_state.preview_pdf, "rb") as file:
+                st.download_button(
+                    label="PDF direkt herunterladen",
+                    data=file,
+                    file_name="vorschau.pdf",
+                    mime="application/pdf"
+                )
+        with col2:
+            st.markdown("Chrome blockiert manchmal die Anzeige von PDFs aus Sicherheitsgründen. "
+                      "Sie können die PDF-Datei herunterladen und auf Ihrem Computer öffnen.")
+    
     # Navigation
     col1, col2 = st.columns(2)
     with col1:
@@ -612,11 +627,18 @@ st.markdown("""
 
 # Aufräumen von temporären Dateien, wenn das Programm beendet wird
 def cleanup():
-    for temp_file in st.session_state.temp_files:
-        try:
-            os.unlink(temp_file)
-        except:
-            pass
+    """Räumt temporäre Dateien auf, wenn die App beendet wird"""
+    try:
+        # Überprüfe, ob temp_files in der Session existiert, bevor darauf zugegriffen wird
+        if hasattr(st, 'session_state') and 'temp_files' in st.session_state:
+            for temp_file in st.session_state.temp_files:
+                try:
+                    if os.path.exists(temp_file):
+                        os.unlink(temp_file)
+                except Exception as e:
+                    print(f"Fehler beim Löschen der temporären Datei {temp_file}: {str(e)}")
+    except Exception as e:
+        print(f"Fehler beim Aufräumen: {str(e)}")
 
 # Cleanup-Funktion registrieren
 import atexit
