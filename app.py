@@ -53,7 +53,22 @@ def display_pdf(file_path):
     try:
         with open(file_path, "rb") as f:
             base64_pdf = base64.b64encode(f.read()).decode('utf-8')
-        pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="600" type="application/pdf"></iframe>'
+        
+        # Verbesserte PDF-Anzeige mit zusätzlichen Parametern für bessere Darstellung
+        pdf_display = f'''
+        <div style="display: flex; justify-content: center; width: 100%; margin: 0 auto; border: 1px solid #ddd; border-radius: 5px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+            <iframe 
+                src="data:application/pdf;base64,{base64_pdf}" 
+                width="100%" 
+                height="800" 
+                type="application/pdf"
+                style="border: none;"
+                frameborder="0"
+                scrolling="auto"
+                allowfullscreen
+            ></iframe>
+        </div>
+        '''
         return pdf_display
     except Exception as e:
         # Zeige eine Fehlermeldung bei sonstigen Problemen
@@ -258,13 +273,45 @@ elif st.session_state.step == 2:
     # Kontaktinformationen
     st.markdown("### Kontaktinformationen")
     kontakt = personal_data.get("kontakt", {})
+    
+    # Ansprechpartner-Dropdown
+    ansprechpartner_options = [
+        "Kai Fischer", 
+        "Melike Demirkol", 
+        "Konrad Ruszyk", 
+        "Alessandro Böhm", 
+        "Salim Alizai"
+    ]
+    
+    # Vorauswahl des Ansprechpartners (falls vorhanden)
+    current_ansprechpartner = kontakt.get("ansprechpartner", "")
+    default_index = 0
+    if current_ansprechpartner in ansprechpartner_options:
+        default_index = ansprechpartner_options.index(current_ansprechpartner)
+    
+    # Ansprechpartner auswählen
     col1, col2, col3 = st.columns(3)
     with col1:
-        edited_data["ansprechpartner"] = st.text_input("Ansprechpartner", value=kontakt.get("ansprechpartner", ""))
+        selected_ansprechpartner = st.selectbox(
+            "Ansprechpartner",
+            options=ansprechpartner_options,
+            index=default_index
+        )
+        edited_data["ansprechpartner"] = selected_ansprechpartner
+        
+        # E-Mail-Adresse basierend auf dem Nachnamen generieren
+        nachname = selected_ansprechpartner.split()[-1]
+        email = f"{nachname.lower()}@galdora.de"
+        edited_data["email"] = email
+    
     with col2:
-        edited_data["telefon"] = st.text_input("Telefon", value=kontakt.get("telefon", ""))
+        # Telefonnummer ist für alle Ansprechpartner gleich
+        telefon = "02161 62126-02"
+        edited_data["telefon"] = st.text_input("Telefon", value=telefon, disabled=True)
+    
     with col3:
-        edited_data["email"] = st.text_input("E-Mail", value=kontakt.get("email", ""))
+        # E-Mail-Adresse anzeigen
+        st.text_input("E-Mail", value=email, disabled=True)
     
     # Berufserfahrung
     st.markdown("### Berufserfahrung")
@@ -494,14 +541,16 @@ elif st.session_state.step == 3:
     
     # Option zum Anonymisieren der persönlichen Daten
     anonymize = st.checkbox("Persönliche Daten anonymisieren", value=False)
-    st.caption("Maskiert Name, Kontaktdaten und andere persönliche Informationen im generierten Profil.")
+    st.caption("Maskiert Name, Wohnort, Kontaktdaten und andere persönliche Informationen im generierten Profil.")
     
     # Wenn anonymisieren gewählt wurde, die Daten entsprechend anpassen
     if anonymize:
         edited_data_copy = edited_data.copy()
-        edited_data_copy["persönliche_daten"]["name"] = "Anonymisiert"
-        edited_data_copy["persönliche_daten"]["kontakt"]["email"] = "email@anonymisiert.de"
-        edited_data_copy["persönliche_daten"]["kontakt"]["telefon"] = "XXX XXX XXX"
+        # Persönliche Daten anonymisieren
+        edited_data_copy["persönliche_daten"]["name"] = "XXXXX XXXXX"
+        edited_data_copy["persönliche_daten"]["wohnort"] = "XXXXX XXXXX"
+        edited_data_copy["persönliche_daten"]["kontakt"]["email"] = "xxxxx@xxxxx.xx"
+        edited_data_copy["persönliche_daten"]["kontakt"]["telefon"] = "XXXX XXXXXXXX"
         profile_data_to_use = edited_data_copy
     else:
         profile_data_to_use = edited_data
@@ -524,7 +573,7 @@ elif st.session_state.step == 3:
     
     # Vorschau anzeigen
     st.markdown("### Vorschau")
-    st.components.v1.html(display_pdf(st.session_state.preview_pdf), height=600)
+    st.components.v1.html(display_pdf(st.session_state.preview_pdf), height=850)
     
     # Navigation
     col1, col2 = st.columns(2)
