@@ -161,9 +161,16 @@ class ProfileGenerator:
         """Erstellt die Elemente für das PDF-Dokument"""
         elements = []
         
-        # GALDORA Logo und Tagline
-        elements.append(Paragraph("GALDORA", self.custom_styles['GaldoraLogo']))
-        elements.append(Paragraph("Ich ist, was wir tun", self.custom_styles['Tagline']))
+        # GALDORA Logo aus Bilddatei einbinden statt Text
+        logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'galdoralogo.png')
+        if os.path.exists(logo_path):
+            img = Image(logo_path, width=180, height=60)
+            elements.append(img)
+            elements.append(Spacer(1, 1*cm))
+        else:
+            # Fallback wenn Bild nicht gefunden wurde
+            elements.append(Paragraph("GALDORA", self.custom_styles['GaldoraLogo']))
+            elements.append(Paragraph("Ich ist, was wir tun", self.custom_styles['Tagline']))
         
         # Profil Überschrift
         elements.append(Paragraph("Profil", self.custom_styles['ProfilTitle']))
@@ -176,21 +183,24 @@ class ProfileGenerator:
         elements.append(Paragraph(name, self.custom_styles['Name']))
         
         # Ansprechpartner Block
+        # Layout mit zwei Spalten: linke Spalte leer, rechte Spalte für Ansprechpartner
         elements.append(Paragraph("IHR ANSPRECHPARTNER", self.custom_styles['ContactHeader']))
         
         # Kontaktinformationen
         kontakt = personal_data.get('kontakt', {})
-        ansprechpartner = kontakt.get('ansprechpartner', 'Herr Fischer')
+        ansprechpartner = kontakt.get('ansprechpartner', 'Fischer')
         telefon = kontakt.get('telefon', '02161 62126-02')
         email = kontakt.get('email', 'fischer@galdora.de')
         
+        # Erstelle Zwei-Spalten-Layout für Ansprechpartner (links leer, rechts Kontaktdaten)
+        # Eine leere Spalte links und die Kontaktdaten rechts eingerückt
         contact_data = [
-            [Paragraph(f"Herr {ansprechpartner}", self.custom_styles['Normal'])],
-            [Paragraph(f"Telefon: {telefon}", self.custom_styles['Normal'])],
-            [Paragraph(f"E-Mail: {email}", self.custom_styles['Normal'])]
+            ['', Paragraph(f"Herr {ansprechpartner}", self.custom_styles['Normal'])],
+            ['', Paragraph(f"Telefon: {telefon}", self.custom_styles['Normal'])],
+            ['', Paragraph(f"E-Mail: {email}", self.custom_styles['Normal'])]
         ]
         
-        contact_table = Table(contact_data, colWidths=[450])
+        contact_table = Table(contact_data, colWidths=[180, 270])
         contact_table.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
@@ -207,6 +217,7 @@ class ProfileGenerator:
         wohnort = personal_data.get('wohnort', '')
         jahrgang = personal_data.get('jahrgang', '')
         führerschein = personal_data.get('führerschein', 'Klasse B (Pkw vorhanden)')
+        gehalt = personal_data.get('wunschgehalt', '')
         
         # Persönliche Daten als separate Zeilen mit Labels
         elements.append(Paragraph("Wohnort:", self.custom_styles['Label']))
@@ -219,64 +230,132 @@ class ProfileGenerator:
         elements.append(Paragraph(führerschein, self.custom_styles['Normal']))
         
         elements.append(Paragraph("Gehalt:", self.custom_styles['Label']))
+        # Ausgabe des Wunschgehalts, wenn vorhanden
+        if gehalt:
+            elements.append(Paragraph(gehalt, self.custom_styles['Normal']))
         elements.append(Spacer(1, 0.5*cm))
         
         # Beruflicher Werdegang
         elements.append(Paragraph("Beruflicher Werdegang", self.custom_styles['Heading2']))
         
-        # Berufserfahrungen hinzufügen
+        # Berufserfahrungen hinzufügen - im Zwei-Spalten-Layout
         for erfahrung in profile_data.get('berufserfahrung', []):
-            # Zeitraum
-            elements.append(Paragraph(f"Seit {erfahrung.get('zeitraum', '')}", self.custom_styles['Period']))
+            # Zweispalten-Tabelle für Zeitraum (links) und Inhalt (rechts)
+            zeitraum = erfahrung.get('zeitraum', '')
+            position = erfahrung.get('position', '')
+            unternehmen = erfahrung.get('unternehmen', '')
             
-            # Unternehmen
-            elements.append(Paragraph(erfahrung.get('unternehmen', ''), self.custom_styles['Company']))
+            # Linke Spalte: Zeitraum
+            left_col = [Paragraph(f"{zeitraum}", self.custom_styles['Period'])]
             
-            # Position/Rolle kursiv
-            elements.append(Paragraph(erfahrung.get('position', ''), self.custom_styles['Position']))
+            # Rechte Spalte: Unternehmen, Position und Aufgaben
+            right_col_content = [
+                Paragraph(unternehmen, self.custom_styles['Company']),
+                Paragraph(position, self.custom_styles['Position'])
+            ]
             
-            # Aufgaben als Aufzählung
-            for aufgabe in erfahrung.get('aufgaben', []):
-                elements.append(Paragraph(f"• {aufgabe}", self.custom_styles['Normal']))
+            # Aufgaben als Aufzählung - maximal 4 Aufgaben
+            aufgaben = erfahrung.get('aufgaben', [])[:4]  # Begrenze auf max. 4 Aufgaben
+            for aufgabe in aufgaben:
+                right_col_content.append(Paragraph(f"• {aufgabe}", self.custom_styles['Normal']))
             
+            right_col = [right_col_content]
+            
+            data = [[left_col, right_col]]
+            
+            table_style = TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('TOPPADDING', (0, 0), (-1, -1), 0),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+            ])
+            
+            # Erstelle Tabelle mit zwei Spalten
+            experience_table = Table(data, colWidths=[100, 350])
+            experience_table.setStyle(table_style)
+            elements.append(experience_table)
             elements.append(Spacer(1, 0.5*cm))
         
         # Ausbildung
         elements.append(Paragraph("Ausbildung/ Weiterbildung", self.custom_styles['Heading2']))
         
-        # Ausbildungen hinzufügen
+        # Ausbildungen hinzufügen - im Zwei-Spalten-Layout
         for ausbildung in profile_data.get('ausbildung', []):
-            # Zeitraum
-            elements.append(Paragraph(ausbildung.get('zeitraum', ''), self.custom_styles['Period']))
+            # Zweispalten-Tabelle für Zeitraum (links) und Inhalt (rechts)
+            zeitraum = ausbildung.get('zeitraum', '')
+            institution = ausbildung.get('institution', '')
+            abschluss = ausbildung.get('abschluss', '')
+            schwerpunkte = ausbildung.get('schwerpunkte', '')
+            note = ausbildung.get('note', '')
             
-            # Institution
-            elements.append(Paragraph(ausbildung.get('institution', ''), self.custom_styles['Company']))
+            # Linke Spalte: Zeitraum
+            left_col = [Paragraph(f"{zeitraum}", self.custom_styles['Period'])]
             
-            # Hinzufügen von Studienschwerpunkten, wenn vorhanden
-            if ausbildung.get('schwerpunkte'):
-                elements.append(Paragraph(f"Studienschwerpunkte: {ausbildung.get('schwerpunkte')}", self.custom_styles['Normal']))
+            # Rechte Spalte: Institution und Details
+            right_col_content = [
+                Paragraph(institution, self.custom_styles['Company'])
+            ]
+            
+            # Schwerpunkte wenn vorhanden
+            if schwerpunkte:
+                right_col_content.append(Paragraph(f"Studienschwerpunkte: {schwerpunkte}", self.custom_styles['Normal']))
             
             # Abschluss
-            elements.append(Paragraph(f"Abschluss: {ausbildung.get('abschluss', '')}", self.custom_styles['Normal']))
+            if abschluss:
+                right_col_content.append(Paragraph(f"Abschluss: {abschluss}", self.custom_styles['Normal']))
             
             # Note wenn vorhanden
-            if ausbildung.get('note'):
-                elements.append(Paragraph(f"Abschlussnote {ausbildung.get('note')}", self.custom_styles['Normal']))
+            if note:
+                right_col_content.append(Paragraph(f"Abschlussnote {note}", self.custom_styles['Normal']))
             
+            right_col = [right_col_content]
+            
+            data = [[left_col, right_col]]
+            
+            table_style = TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('TOPPADDING', (0, 0), (-1, -1), 0),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+            ])
+            
+            # Erstelle Tabelle mit zwei Spalten
+            education_table = Table(data, colWidths=[100, 350])
+            education_table.setStyle(table_style)
+            elements.append(education_table)
             elements.append(Spacer(1, 0.3*cm))
         
-        # Weiterbildungen hinzufügen
+        # Weiterbildungen hinzufügen - im Zwei-Spalten-Layout
         for weiterbildung in profile_data.get('weiterbildungen', []):
-            # Zeitraum
-            elements.append(Paragraph(weiterbildung.get('zeitraum', ''), self.custom_styles['Period']))
+            # Zweispalten-Tabelle für Zeitraum (links) und Inhalt (rechts)
+            zeitraum = weiterbildung.get('zeitraum', '')
+            bezeichnung = weiterbildung.get('bezeichnung', '')
+            abschluss = weiterbildung.get('abschluss', '')
             
-            # Bezeichnung
-            elements.append(Paragraph(weiterbildung.get('bezeichnung', ''), self.custom_styles['Company']))
+            # Linke Spalte: Zeitraum
+            left_col = [Paragraph(f"{zeitraum}", self.custom_styles['Period'])]
+            
+            # Rechte Spalte: Bezeichnung und Abschluss
+            right_col_content = [
+                Paragraph(bezeichnung, self.custom_styles['Company'])
+            ]
             
             # Abschluss wenn vorhanden
-            if weiterbildung.get('abschluss'):
-                elements.append(Paragraph(f"Abschluss: {weiterbildung.get('abschluss')}", self.custom_styles['Normal']))
+            if abschluss:
+                right_col_content.append(Paragraph(f"Abschluss: {abschluss}", self.custom_styles['Normal']))
             
+            right_col = [right_col_content]
+            
+            data = [[left_col, right_col]]
+            
+            table_style = TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('TOPPADDING', (0, 0), (-1, -1), 0),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+            ])
+            
+            # Erstelle Tabelle mit zwei Spalten
+            training_table = Table(data, colWidths=[100, 350])
+            training_table.setStyle(table_style)
+            elements.append(training_table)
             elements.append(Spacer(1, 0.3*cm))
         
         # Firmenfußzeile hinzufügen
@@ -304,3 +383,46 @@ class ProfileGenerator:
         )
         
         return Paragraph(footer_text, footer_style)
+
+# Überprüfungsfunktion zur Validierung der Profildaten
+def check_missing_profile_data(profile_data):
+    """
+    Überprüft, ob alle wichtigen Informationen im Profil vorhanden sind
+    
+    Args:
+        profile_data: Dictionary mit Profildaten
+        
+    Returns:
+        Liste der fehlenden Schlüssel/Informationen
+    """
+    # Liste der erforderlichen Schlüssel
+    required_keys = {
+        'persönliche_daten': ['name', 'wohnort', 'jahrgang', 'führerschein', 'wunschgehalt'],
+        'kontakt': ['ansprechpartner', 'telefon', 'email'],
+        'berufserfahrung': [],  # Mindestens ein Eintrag sollte vorhanden sein
+        'ausbildung': []        # Mindestens ein Eintrag sollte vorhanden sein
+    }
+    
+    missing = []
+    
+    # Überprüfe persönliche Daten
+    personal_data = profile_data.get('persönliche_daten', {})
+    for key in required_keys['persönliche_daten']:
+        if key not in personal_data or not personal_data[key]:
+            missing.append(f"persönliche_daten.{key}")
+    
+    # Überprüfe Kontaktdaten
+    kontakt = personal_data.get('kontakt', {})
+    for key in required_keys['kontakt']:
+        if key not in kontakt or not kontakt[key]:
+            missing.append(f"persönliche_daten.kontakt.{key}")
+    
+    # Überprüfe, ob Berufserfahrung vorhanden ist
+    if 'berufserfahrung' not in profile_data or not profile_data['berufserfahrung']:
+        missing.append("berufserfahrung (mindestens ein Eintrag)")
+    
+    # Überprüfe, ob Ausbildung vorhanden ist
+    if 'ausbildung' not in profile_data or not profile_data['ausbildung']:
+        missing.append("ausbildung (mindestens ein Eintrag)")
+    
+    return missing
