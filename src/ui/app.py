@@ -5,11 +5,17 @@ import json
 import base64
 from PIL import Image
 import io
-from document_processor import DocumentProcessor
-from ai_extractor import AIExtractor
-from combined_processor import CombinedProcessor  # Import des neuen kombinierten Prozessors
-from template_generator import ProfileGenerator
-import config  # Importiere das neue Konfigurationsmodul
+import sys
+
+# Füge den übergeordneten Ordner zum Pythonpfad hinzu, um relative Importe zu ermöglichen
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
+# Importe aus den reorganisierten Modulen
+from src.core.document_processor import DocumentProcessor
+from src.core.ai_extractor import AIExtractor
+from src.core.combined_processor import CombinedProcessor
+from src.templates.template_generator import ProfileGenerator
+import src.utils.config as config  # Importiere das Konfigurationsmodul
 
 # CSS für Farbverlaufshintergrund und weiße Schaltflächen
 custom_css = """
@@ -658,21 +664,6 @@ if st.session_state.step == 1:
                     with col3:
                         edited_data["jahrgang"] = st.text_input("Jahrgang", value=personal_data.get("jahrgang", ""))
                     
-                    # Weitere persönliche Daten - Adresse, Telefon, E-Mail und Alter
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        edited_data["strasse"] = st.text_input("Straße & Hausnummer", value=personal_data.get("strasse", ""))
-                    with col2:
-                        edited_data["plz_ort"] = st.text_input("PLZ & Ort", value=personal_data.get("plz_ort", edited_data.get("wohnort", "")))
-                    
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        edited_data["telefon_privat"] = st.text_input("Telefonnummer (privat)", value=personal_data.get("telefon_privat", ""))
-                    with col2:
-                        edited_data["email_privat"] = st.text_input("E-Mail-Adresse (privat)", value=personal_data.get("email_privat", ""))
-                    with col3:
-                        edited_data["alter"] = st.text_input("Alter", value=personal_data.get("alter", ""))
-                    
                     # Führerschein und Wunschgehalt
                     col1, col2 = st.columns(2)
                     with col1:
@@ -859,11 +850,6 @@ if st.session_state.step == 1:
                             "wohnort": edited_data.get("wohnort", ""),
                             "jahrgang": edited_data.get("jahrgang", ""),
                             "führerschein": edited_data.get("führerschein", ""),
-                            "strasse": edited_data.get("strasse", ""),
-                            "plz_ort": edited_data.get("plz_ort", ""),
-                            "telefon_privat": edited_data.get("telefon_privat", ""),
-                            "email_privat": edited_data.get("email_privat", ""),
-                            "alter": edited_data.get("alter", ""),
                             "kontakt": {
                                 "ansprechpartner": edited_data.get("ansprechpartner", ""),
                                 "telefon": edited_data.get("telefon", ""),

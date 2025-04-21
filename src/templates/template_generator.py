@@ -197,7 +197,7 @@ class ProfileGenerator:
         
         # Korrekte Pfade zum Verzeichnis der Quellendateien
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        sources_dir = os.path.join(current_dir, 'sources')
+        sources_dir = os.path.join(os.path.dirname(os.path.dirname(current_dir)), 'sources')
         
         # Wenn sources nicht existiert, versuche relative Pfade vom Arbeitsverzeichnis
         if not os.path.exists(sources_dir):
