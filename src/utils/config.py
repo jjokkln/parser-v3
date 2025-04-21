@@ -15,8 +15,7 @@ CONFIG_FILE = CONFIG_DIR / "settings.json"
 DEFAULT_SETTINGS = {
     "openai_api_key": "",
     "default_template": "professional",
-    "show_extracted_text": False,
-    "anonymize_by_default": False
+    "show_extracted_text": False
 }
 
 def ensure_config_dir():

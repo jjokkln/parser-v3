@@ -1,5 +1,6 @@
 import io
 import os
+import hashlib
 from PIL import Image
 import pytesseract
 import PyPDF2
@@ -7,6 +8,8 @@ from pdf2image import convert_from_path
 from docx import Document
 import openai
 import json
+import concurrent.futures
+import tempfile
 
 class CombinedProcessor:
     """
@@ -26,6 +29,10 @@ class CombinedProcessor:
             raise ValueError("OpenAI API Key ist erforderlich")
         
         openai.api_key = self.api_key
+        
+        # Cache-Verzeichnis erstellen, wenn es nicht existiert
+        self.cache_dir = os.path.join(tempfile.gettempdir(), 'parser_cache')
+        os.makedirs(self.cache_dir, exist_ok=True)
     
     def process_and_extract(self, file_path, file_extension):
         """
@@ -38,11 +45,22 @@ class CombinedProcessor:
         Returns:
             Tuple mit (extrahierter Text, strukturierte Profildaten)
         """
+        # Datei-Fingerabdruck erstellen für Caching
+        file_hash = self._get_file_hash(file_path)
+        
+        # Prüfen, ob Ergebnisse im Cache vorhanden sind
+        cache_result = self._check_cache(file_hash)
+        if cache_result:
+            return cache_result
+        
         # Schritt 1: Text aus Dokument extrahieren
         extracted_text = self._process_document(file_path, file_extension)
         
         # Schritt 2: KI-Analyse der extrahierten Daten
         profile_data = self._extract_profile_data(extracted_text, file_extension)
+        
+        # Ergebnisse cachen
+        self._cache_results(file_hash, extracted_text, profile_data)
         
         return extracted_text, profile_data
     
@@ -59,12 +77,56 @@ class CombinedProcessor:
         Returns:
             Tuple mit (strukturierte Profildaten, extrahierter Text)
         """
+        # Datei-Fingerabdruck erstellen für Caching
+        file_hash = self._get_file_hash(file_path)
+        
+        # Prüfen, ob Ergebnisse im Cache vorhanden sind
+        cache_result = self._check_cache(file_hash)
+        if cache_result:
+            extracted_text, profile_data = cache_result
+            return profile_data, extracted_text
+        
         # Tatsächlich muss zuerst der Text extrahiert werden, bevor die KI-Analyse erfolgen kann
         extracted_text = self._process_document(file_path, file_extension)
         profile_data = self._extract_profile_data(extracted_text, file_extension)
         
+        # Ergebnisse cachen
+        self._cache_results(file_hash, extracted_text, profile_data)
+        
         # Gebe die Ergebnisse in umgekehrter Reihenfolge zurück
         return profile_data, extracted_text
+    
+    def _get_file_hash(self, file_path):
+        """Erstellt einen Hash-Wert für eine Datei zur Identifikation im Cache"""
+        hash_md5 = hashlib.md5()
+        with open(file_path, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                hash_md5.update(chunk)
+        return hash_md5.hexdigest()
+    
+    def _check_cache(self, file_hash):
+        """Prüft, ob Ergebnisse für einen Datei-Hash im Cache vorhanden sind"""
+        cache_path = os.path.join(self.cache_dir, f"{file_hash}.json")
+        if os.path.exists(cache_path):
+            try:
+                with open(cache_path, 'r', encoding='utf-8') as f:
+                    cache_data = json.load(f)
+                return cache_data.get('extracted_text', ''), cache_data.get('profile_data', {})
+            except Exception as e:
+                print(f"Fehler beim Lesen aus dem Cache: {str(e)}")
+        return None
+    
+    def _cache_results(self, file_hash, extracted_text, profile_data):
+        """Speichert Extraktions- und Analyseergebnisse im Cache"""
+        cache_path = os.path.join(self.cache_dir, f"{file_hash}.json")
+        try:
+            with open(cache_path, 'w', encoding='utf-8') as f:
+                json.dump({
+                    'extracted_text': extracted_text,
+                    'profile_data': profile_data
+                }, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"Fehler beim Schreiben in den Cache: {str(e)}")
     
     # ---- Dokumentenverarbeitung (aus DocumentProcessor) ----
     
@@ -89,7 +151,7 @@ class CombinedProcessor:
             raise ValueError(f"Nicht unterstützter Dateityp: {file_extension}")
     
     def _extract_from_pdf(self, file_path):
-        """Extrahiert Text aus PDF-Dateien"""
+        """Extrahiert Text aus PDF-Dateien mit optimierter Verarbeitung"""
         text = ""
         
         # Versuche zunächst direkte Textextraktion
@@ -106,23 +168,56 @@ class CombinedProcessor:
         # Falls kein oder wenig Text extrahiert wurde, OCR verwenden
         if len(text.strip()) < 100:  # Heuristik: Weniger als 100 Zeichen bedeutet wahrscheinlich ein Scan
             try:
-                # PDF in Bilder umwandeln und OCR durchführen
-                images = convert_from_path(file_path)
-                for i, image in enumerate(images):
-                    page_text = pytesseract.image_to_string(image, lang='deu')  # Deutsch für deutsche Dokumente
-                    text += page_text + "\n"
+                # PDF in Bilder umwandeln mit höherer DPI für bessere OCR-Ergebnisse
+                images = convert_from_path(file_path, dpi=300)
+                
+                # Parallele OCR-Verarbeitung für mehrere Seiten
+                with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
+                    future_to_image = {executor.submit(self._perform_ocr, image): i for i, image in enumerate(images)}
+                    
+                    # Resultate sammeln
+                    page_texts = [""] * len(images)
+                    for future in concurrent.futures.as_completed(future_to_image):
+                        page_idx = future_to_image[future]
+                        try:
+                            page_texts[page_idx] = future.result()
+                        except Exception as e:
+                            print(f"Fehler bei OCR für Seite {page_idx}: {str(e)}")
+                
+                # Texte zusammenführen
+                text = "\n".join(page_texts)
+                
             except Exception as e:
                 print(f"Fehler bei PDF-OCR: {str(e)}")
                 # Wenn auch OCR fehlschlägt, zurückgeben was wir haben
         
         return text
     
+    def _perform_ocr(self, image):
+        """OCR für ein einzelnes Bild durchführen"""
+        # Bild für bessere OCR-Ergebnisse vorverarbeiten
+        image = self._preprocess_image(image)
+        # OCR für deutsche Dokumente
+        text = pytesseract.image_to_string(image, lang='deu', config='--psm 1 --oem 3')
+        return text
+    
+    def _preprocess_image(self, image):
+        """Optimiert Bilder für bessere OCR-Ergebnisse"""
+        # Bildvorverarbeitung (Graustufen, Kontrast erhöhen) könnte hier implementiert werden
+        # Für einfache Implementierung geben wir das Originalbild zurück
+        return image
+    
     def _extract_from_image(self, file_path):
-        """Extrahiert Text aus Bilddateien mit OCR"""
+        """Extrahiert Text aus Bilddateien mit optimiertem OCR"""
         try:
+            # Bild mit PIL öffnen
             image = Image.open(file_path)
-            # OCR für deutsche Dokumente
-            text = pytesseract.image_to_string(image, lang='deu')
+            
+            # Bild vorverarbeiten
+            image = self._preprocess_image(image)
+            
+            # OCR für deutsche Dokumente mit optimierten Parametern
+            text = pytesseract.image_to_string(image, lang='deu', config='--psm 1 --oem 3')
             return text
         except Exception as e:
             raise Exception(f"Fehler bei der Bildverarbeitung: {str(e)}")

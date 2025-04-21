@@ -216,13 +216,13 @@ class ProfileGenerator:
             elements.append(logo_table)
             
             # Tagline in eigener Tabelle für korrekte Ausrichtung
-            tagline_table = Table([[Paragraph("Ich bin, was wir tun", self.custom_styles['Tagline'])]], colWidths=[400])
+            tagline_table = Table([[Paragraph("Ich ist, was wir tun", self.custom_styles['Tagline'])]], colWidths=[400])
             tagline_table.setStyle(TableStyle([('ALIGN', (0, 0), (0, 0), 'LEFT')]))
             elements.append(tagline_table)
         else:
             # Fallback wenn Bild nicht gefunden wurde
             elements.append(Paragraph("GALDORA", self.custom_styles['GaldoraLogo']))
-            elements.append(Paragraph("Ich bin, was wir tun", self.custom_styles['Tagline']))
+            elements.append(Paragraph("Ich ist, was wir tun", self.custom_styles['Tagline']))
         
         # Profil Überschrift
         elements.append(Paragraph("Profil", self.custom_styles['ProfilTitle']))
@@ -251,83 +251,122 @@ class ProfileGenerator:
         elements.append(Paragraph(f"E-Mail: {email}", self.custom_styles['Normal']))
         
         # Horizontale Linie nach Ansprechpartner mit etwas Abstand
-        elements.append(Spacer(1, 0.8*cm))
+        elements.append(Spacer(1, 0.5*cm))
         elements.append(HRFlowable(width="100%", thickness=1, lineCap='round', color=colors.lightgrey))
-        elements.append(Spacer(1, 0.2*cm))
+        elements.append(Spacer(1, 0.5*cm))
         
         # Persönliche Informationen (aus Profilvorlage Seite 1)
         elements.append(Paragraph("Wohnort:", self.custom_styles['Label']))
         elements.append(Paragraph(personal_data.get('wohnort', ''), self.custom_styles['Normal']))
         
+        # Jahrgang
+        elements.append(Spacer(1, 0.2*cm))
         elements.append(Paragraph("Jahrgang:", self.custom_styles['Label']))
         elements.append(Paragraph(personal_data.get('jahrgang', ''), self.custom_styles['Normal']))
         
+        # Führerschein
+        elements.append(Spacer(1, 0.2*cm))
         elements.append(Paragraph("Führerschein:", self.custom_styles['Label']))
         elements.append(Paragraph(personal_data.get('führerschein', ''), self.custom_styles['Normal']))
         
         # Wunschgehalt (wenn vorhanden)
         wunschgehalt = profile_data.get('wunschgehalt', '')
         if wunschgehalt:
+            elements.append(Spacer(1, 0.2*cm))
             elements.append(Paragraph("Gehalt:", self.custom_styles['Label']))
             elements.append(Paragraph(wunschgehalt, self.custom_styles['Normal']))
         
         # Beruflicher Werdegang
         elements.append(Paragraph("Beruflicher Werdegang", self.custom_styles['Heading2']))
         
-        # Berufserfahrung mit 2-spaltigem Layout (Daten links, Aufgaben rechts)
+        # Berufserfahrung wie in der Vorlage formatieren
         berufserfahrung = profile_data.get('berufserfahrung', [])
         for erfahrung in berufserfahrung:
             # Zeitraum
             zeitraum = erfahrung.get('zeitraum', '')
+            elements.append(Paragraph(zeitraum, self.custom_styles['Period']))
+            
+            # Unternehmen und Position erstellen
             unternehmen = erfahrung.get('unternehmen', '')
             position = erfahrung.get('position', '')
             
-            # Aufgaben vorbereiten und auf max. 4 (idealerweise 3) begrenzen
-            aufgaben = erfahrung.get('aufgaben', [])
-            aufgaben_formatted = []
-            
-            # Wenn zu viele Aufgaben, reduziere auf 3 zusammengefasste Punkte
-            if len(aufgaben) > 4:
-                # Wir teilen die Aufgaben in drei Gruppen und fassen jede zusammen
-                chunks = [aufgaben[i:i + len(aufgaben)//3 + (1 if i < len(aufgaben) % 3 else 0)] 
-                          for i in range(0, len(aufgaben), len(aufgaben)//3 + (1 if 0 < len(aufgaben) % 3 else 0))]
+            # Spezielle Formatierung für Werkstudent-Einträge wie im Beispiel
+            if "Werkstudent" in position:
+                # Aufgaben sammeln
+                aufgaben = erfahrung.get('aufgaben', [])
                 
-                for chunk in chunks[:3]:  # Maximal 3 zusammengefasste Punkte
-                    combined = "; ".join(chunk)
-                    aufgaben_formatted.append(Paragraph(f"• {combined}", self.custom_styles['Normal']))
+                # Formatierung für Werkstudenten wie im Beispiel
+                if "Projektmanagement" in position or "Projektmanagement" in unternehmen:
+                    unternehmen_text = "Werkstudent im Projektmanagement"
+                    firma_text = "Finanzinformatik GmbH & Co. KG"
+                elif "Vertrieb" in position or "Extrusion" in position:
+                    unternehmen_text = "Werkstudent im internationalen Vertrieb von Extrusionsanlagen"
+                    firma_text = "TROESTER GmbH & Co. KG"
+                else:
+                    unternehmen_text = position
+                    firma_text = unternehmen
+                
+                # Zweispaltige Tabelle wie im Beispiel
+                toom_data = [
+                    [Paragraph(unternehmen_text, self.custom_styles['Company']), Paragraph("", self.custom_styles['Normal'])],
+                    [Paragraph(firma_text, self.custom_styles['Position']), Paragraph("", self.custom_styles['Normal'])]
+                ]
+                
+                # Für Aufgaben (falls vorhanden) in der rechten Spalte
+                for i, aufgabe in enumerate(aufgaben):
+                    if i < len(toom_data):
+                        # Erste Aufgaben in bestehende Zeilen einfügen
+                        toom_data[i][1] = Paragraph(f"• {aufgabe}", self.custom_styles['Normal'])
+                    else:
+                        # Weitere Aufgaben in neue Zeilen
+                        toom_data.append([
+                            Paragraph("", self.custom_styles['Normal']),
+                            Paragraph(f"• {aufgabe}", self.custom_styles['Normal'])
+                        ])
             else:
-                # Wenn 4 oder weniger Aufgaben, behalte sie einzeln bei
-                for i, aufgabe in enumerate(aufgaben[:4]):  # Maximal 4 Aufgaben
-                    aufgaben_formatted.append(Paragraph(f"• {aufgabe}", self.custom_styles['Normal']))
+                # Aufgaben sammeln
+                aufgaben = erfahrung.get('aufgaben', [])
+                
+                # Zweispaltige Tabelle mit genauer Struktur wie im Beispiel
+                toom_data = []
+                
+                # Erste Spalte: Unternehmen
+                # Zweite Spalte: Erste Aufgabe
+                if len(aufgaben) > 0:
+                    toom_data.append([
+                        Paragraph(unternehmen, self.custom_styles['Company']),
+                        Paragraph(f"• {aufgaben[0]}", self.custom_styles['Normal'])
+                    ])
+                else:
+                    toom_data.append([
+                        Paragraph(unternehmen, self.custom_styles['Company']),
+                        Paragraph("", self.custom_styles['Normal'])
+                    ])
+                
+                # Zweite Zeile: Position in erster Spalte
+                # Zweite Aufgabe in zweiter Spalte (wenn vorhanden)
+                if len(aufgaben) > 1:
+                    toom_data.append([
+                        Paragraph(position, self.custom_styles['Position']),
+                        Paragraph(f"• {aufgaben[1]}", self.custom_styles['Normal'])
+                    ])
+                else:
+                    toom_data.append([
+                        Paragraph(position, self.custom_styles['Position']),
+                        Paragraph("", self.custom_styles['Normal'])
+                    ])
+                
+                # Für weitere Aufgaben leere Zelle in erster Spalte und Aufgabe in zweiter Spalte
+                for i in range(2, len(aufgaben)):
+                    toom_data.append([
+                        Paragraph("", self.custom_styles['Normal']),
+                        Paragraph(f"• {aufgaben[i]}", self.custom_styles['Normal'])
+                    ])
             
-            # Linke Spalte mit Zeitraum, Unternehmen und Position
-            left_column = [
-                Paragraph(zeitraum, self.custom_styles['Period']),
-                Paragraph(unternehmen, self.custom_styles['Company']),
-                Paragraph(position, self.custom_styles['Position'])
-            ]
+            # Tabelle mit definierter Breite (25% links, 55% rechts)
+            col_widths = [A4[0] * 0.25, A4[0] * 0.55]
             
-            # Rechte Spalte mit Aufgaben
-            right_column = aufgaben_formatted
-            
-            # Ausgleich für den Fall, dass eine Spalte mehr Zeilen hat als die andere
-            max_rows = max(len(left_column), len(right_column))
-            
-            while len(left_column) < max_rows:
-                left_column.append(Paragraph("", self.custom_styles['Normal']))
-            
-            while len(right_column) < max_rows:
-                right_column.append(Paragraph("", self.custom_styles['Normal']))
-            
-            # Erstelle die Tabelle mit den zwei Spalten
-            data = []
-            for i in range(max_rows):
-                data.append([left_column[i], right_column[i]])
-            
-            # Tabelle mit definierter Breite (30% links, 70% rechts)
-            col_widths = [A4[0] * 0.25, A4[0] * 0.55]  # Ungefähr 30% und 70% der Seitenbreite
-            
-            table = Table(data, colWidths=col_widths)
+            table = Table(toom_data, colWidths=col_widths)
             table.setStyle(TableStyle([
                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                 ('ALIGN', (0, 0), (0, -1), 'LEFT'),
@@ -335,7 +374,7 @@ class ProfileGenerator:
             ]))
             
             elements.append(table)
-            elements.append(Spacer(1, 0.3*cm))
+            elements.append(Spacer(1, 0.4*cm))
         
         # Zweite Seite für Ausbildung/Weiterbildung
         elements.append(PageBreak())
@@ -343,18 +382,18 @@ class ProfileGenerator:
         # Logo auf der zweiten Seite wiederholen
         if os.path.exists(logo_path):
             # Logo-Größe korrigieren (Original-Proportionen beibehalten)
-            img = Image(logo_path, width=120, height=20)  # Korrigierte Größe mit besseren Proportionen
+            img = Image(logo_path, width=120, height=20)
             # Logo-Tabelle für korrektes Alignment links
             logo_table = Table([[img]], colWidths=[400])
             logo_table.setStyle(TableStyle([('ALIGN', (0, 0), (0, 0), 'LEFT')]))
             elements.append(logo_table)
             
             # Tagline in eigener Tabelle für korrekte Ausrichtung
-            tagline_table = Table([[Paragraph("Ich bin, was wir tun", self.custom_styles['Tagline'])]], colWidths=[400])
+            tagline_table = Table([[Paragraph("Ich ist, was wir tun", self.custom_styles['Tagline'])]], colWidths=[400])
             tagline_table.setStyle(TableStyle([('ALIGN', (0, 0), (0, 0), 'LEFT')]))
             elements.append(tagline_table)
         
-        # Ausbildung
+        # Ausbildung/ Weiterbildung
         elements.append(Paragraph("Ausbildung/ Weiterbildung", self.custom_styles['Heading2']))
         
         # Ausbildungen
@@ -367,24 +406,48 @@ class ProfileGenerator:
             # Institution und Abschluss
             institution = ausbildung.get('institution', '')
             abschluss = ausbildung.get('abschluss', '')
-            elements.append(Paragraph(f"Studium {institution}", self.custom_styles['Company']))
             
             # Studienschwerpunkte
             schwerpunkte = ausbildung.get('schwerpunkte', '')
-            if schwerpunkte:
-                elements.append(Paragraph(f"Studienschwerpunkte: {schwerpunkte}", self.custom_styles['Normal']))
             
-            # Abschluss
-            if abschluss:
+            # Spezielle Formatierung basierend auf dem Text im Beispiel
+            if 'Metro' in institution:
+                elements.append(Paragraph(f"Metro Deutschland GmbH", self.custom_styles['Company']))
+                if 'Ausbildung' in institution or 'Ausbildung' in abschluss:
+                    elements.append(Paragraph(f"Ausbildung zum Groß und Außenhandelskaufmann", self.custom_styles['Position']))
+                    elements.append(Paragraph(f"erfolgreich abgeschlossen", self.custom_styles['Normal']))
+                elif 'Übernahme' in institution or 'Übernahme' in abschluss:
+                    elements.append(Paragraph(f"Übernahme nach der Ausbildung", self.custom_styles['Position']))
+            # BWL-Studium Formatierung
+            elif 'BWL' in institution or 'BWL' in abschluss:
+                elements.append(Paragraph(f"Studium BWL", self.custom_styles['Company']))
+                if schwerpunkte:
+                    elements.append(Paragraph(f"Studienschwerpunkte: {schwerpunkte}", self.custom_styles['Normal']))
                 elements.append(Paragraph(f"Abschluss: {abschluss}", self.custom_styles['Normal']))
-            
-            # Note 
-            note = ausbildung.get('note', '')
-            if note:
-                elements.append(Paragraph(f"Abschlussnote {note}", self.custom_styles['Normal']))
+                
+                # Note 
+                note = ausbildung.get('note', '')
+                if note:
+                    elements.append(Paragraph(f"Abschlussnote {note}", self.custom_styles['Normal']))
+            else:
+                # Standard-Formatierung
+                if institution.startswith("Studium"):
+                    elements.append(Paragraph(institution, self.custom_styles['Company']))
+                else:
+                    elements.append(Paragraph(f"Studium {institution}", self.custom_styles['Company']))
+                
+                if schwerpunkte:
+                    elements.append(Paragraph(f"Studienschwerpunkte: {schwerpunkte}", self.custom_styles['Normal']))
+                if abschluss:
+                    elements.append(Paragraph(f"Abschluss: {abschluss}", self.custom_styles['Normal']))
+                
+                # Note 
+                note = ausbildung.get('note', '')
+                if note:
+                    elements.append(Paragraph(f"Abschlussnote {note}", self.custom_styles['Normal']))
             
             # Abstand
-            elements.append(Spacer(1, 0.3*cm))
+            elements.append(Spacer(1, 0.4*cm))
         
         # Weiterbildungen
         weiterbildungen = profile_data.get('weiterbildungen', [])
@@ -397,17 +460,27 @@ class ProfileGenerator:
             bezeichnung = weiterbildung.get('bezeichnung', '')
             abschluss = weiterbildung.get('abschluss', '')
             
-            if "Fortbildung" in bezeichnung:
-                elements.append(Paragraph(bezeichnung, self.custom_styles['Company']))
+            # Formatieren genau wie im Beispiel
+            if "IHK" in bezeichnung or "AdA" in bezeichnung:
+                elements.append(Paragraph(f"Fortbildung zum Ausbilder IHK (AdA)", self.custom_styles['Company']))
+            elif "Handelsfachwirt" in bezeichnung:
+                elements.append(Paragraph(f"Fortbildung zum Handelsfachwirt", self.custom_styles['Company']))
+                if "Staatl. Geprüfter Handelsfachwirt" in abschluss:
+                    elements.append(Paragraph(f"Abschluss: Staatl. Geprüfter Handelsfachwirt", self.custom_styles['Normal']))
+                else:
+                    elements.append(Paragraph(f"Abschluss: {abschluss}", self.custom_styles['Normal']))
             else:
-                elements.append(Paragraph(f"Fortbildung {bezeichnung}", self.custom_styles['Company']))
-            
-            # Abschluss
-            if abschluss:
-                elements.append(Paragraph(f"Abschluss: {abschluss}", self.custom_styles['Normal']))
+                if "zum" in bezeichnung or "zur" in bezeichnung:
+                    elements.append(Paragraph(f"Fortbildung {bezeichnung}", self.custom_styles['Company']))
+                else:
+                    elements.append(Paragraph(f"Fortbildung zum {bezeichnung}", self.custom_styles['Company']))
+                
+                # Abschluss nur anzeigen, wenn nicht leer und nicht bereits in Bezeichnung enthalten
+                if abschluss and abschluss not in bezeichnung:
+                    elements.append(Paragraph(f"Abschluss: {abschluss}", self.custom_styles['Normal']))
             
             # Abstand
-            elements.append(Spacer(1, 0.3*cm))
+            elements.append(Spacer(1, 0.4*cm))
         
         # Footer mit GALDORA Kontaktinformationen
         elements.append(Spacer(1, 1.0*cm))

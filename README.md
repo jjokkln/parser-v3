@@ -76,6 +76,5 @@ streamlit run src/ui/app.py
 - **KI-gestützte Analyse** mittels OpenAI-API
 - **Profilgenerierung** in verschiedenen Templates (Klassisch, Modern, Professionell, Minimalistisch)
 - **Konfigurationsmanagement** mit sicherer API-Key-Speicherung
-- **Anonymisierungsfunktion** für persönliche Daten
 - **Ansprechpartner-Verwaltung** über Dropdown-Menü
 - **Moderne UI** mit Glasmorphismus-Design
