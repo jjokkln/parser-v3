@@ -88,74 +88,76 @@ class ProfileGenerator:
             spaceAfter=1.5*cm
         )
         
-        # Profil Überschrift
+        # Profil Überschrift - nach links ausgerichtet statt zentriert
         custom_styles['ProfilTitle'] = ParagraphStyle(
             'ProfilTitle',
             parent=self.styles['Heading1'],
-            fontSize=18,
+            fontSize=16,
             fontName='Helvetica-Bold',
             textColor=colors.HexColor('#1973B8'),  # GALDORA Blau
-            spaceBefore=0.5*cm,
-            spaceAfter=0.2*cm,
-            underline=1  # Unterstreichung hinzugefügt
+            spaceBefore=0.3*cm,
+            spaceAfter=0.5*cm,
+            alignment=0,  # Links ausgerichtet (0) statt zentriert (1)
+            underline=0  # Keine Unterstreichung
         )
         
-        # Name
+        # Name - nach links ausgerichtet statt zentriert
         custom_styles['Name'] = ParagraphStyle(
             'Name',
             parent=self.styles['Normal'],
-            fontSize=16,
+            fontSize=14,
             fontName='Helvetica',
             spaceBefore=0.2*cm,
-            spaceAfter=1.5*cm
+            spaceAfter=0.8*cm,
+            alignment=0  # Links ausgerichtet (0) statt zentriert (1)
         )
         
         # Überschrift für Abschnitte (Beruflicher Werdegang, Ausbildung, etc.)
         custom_styles['Heading2'] = ParagraphStyle(
             'Heading2',
             parent=self.styles['Heading2'],
-            fontSize=14,
+            fontSize=12,
             fontName='Helvetica-Bold',
             textColor=colors.black,
-            spaceBefore=1.0*cm,
+            spaceBefore=0.7*cm,
             spaceAfter=0.3*cm,
-            underline=1  # Unterstreichung
+            underline=0  # Keine Unterstreichung
         )
         
-        # Ansprechpartner Überschrift
+        # Ansprechpartner Überschrift - ALLES GROß
         custom_styles['ContactHeader'] = ParagraphStyle(
             'ContactHeader',
             parent=self.styles['Normal'],
-            fontSize=10,
+            fontSize=9,
             fontName='Helvetica-Bold',
             spaceBefore=0.2*cm,
-            spaceAfter=0.5*cm,  # Erhöht von 0.1 auf 0.5 cm
-            underline=1  # Unterstreichung hinzugefügt
+            spaceAfter=0.1*cm,
+            underline=0
         )
         
         # Ansprechpartner Daten (grau)
         custom_styles['ContactData'] = ParagraphStyle(
             'ContactData',
             parent=self.styles['Normal'],
-            fontSize=10,
+            fontSize=9,
             textColor=colors.grey,
-            spaceAfter=0.2*cm,
-            leftIndent=2*cm  # 2cm nach rechts eingerückt
+            spaceAfter=0.1*cm,
+            leftIndent=0*cm
         )
         
         # Normaler Text
         custom_styles['Normal'] = ParagraphStyle(
             'Normal',
             parent=self.styles['Normal'],
-            fontSize=10,
-            spaceAfter=0.2*cm
+            fontSize=9,
+            spaceAfter=0.1*cm
         )
         
         # Label-Text (fett) mit Text in gleicher Zeile
         custom_styles['LabelInline'] = ParagraphStyle(
             'LabelInline',
             parent=self.styles['Normal'],
-            fontSize=10,
+            fontSize=9,
             fontName='Helvetica-Bold',
             spaceAfter=0.1*cm
         )
@@ -164,7 +166,7 @@ class ProfileGenerator:
         custom_styles['Label'] = ParagraphStyle(
             'Label',
             parent=self.styles['Normal'],
-            fontSize=10,
+            fontSize=9,
             fontName='Helvetica-Bold',
             spaceAfter=0.1*cm
         )
@@ -173,7 +175,7 @@ class ProfileGenerator:
         custom_styles['Company'] = ParagraphStyle(
             'Company',
             parent=self.styles['Normal'],
-            fontSize=10,
+            fontSize=9,
             fontName='Helvetica-Bold',
             spaceAfter=0.1*cm
         )
@@ -182,7 +184,7 @@ class ProfileGenerator:
         custom_styles['Position'] = ParagraphStyle(
             'Position',
             parent=self.styles['Italic'],
-            fontSize=10,
+            fontSize=9,
             fontName='Helvetica-Oblique',
             spaceAfter=0.2*cm
         )
@@ -191,7 +193,7 @@ class ProfileGenerator:
         custom_styles['Period'] = ParagraphStyle(
             'Period',
             parent=self.styles['Normal'],
-            fontSize=10,
+            fontSize=9,
             fontName='Helvetica-Bold',
             alignment=0,  # Linksbündig
             spaceAfter=0.1*cm
@@ -201,7 +203,7 @@ class ProfileGenerator:
         custom_styles['TaskPoint'] = ParagraphStyle(
             'TaskPoint',
             parent=self.styles['Normal'],
-            fontSize=10,
+            fontSize=9,
             alignment=0,  # Linksbündig
             leftIndent=0.5*cm,
             bulletIndent=0.3*cm,
@@ -212,7 +214,7 @@ class ProfileGenerator:
         custom_styles['Footer'] = ParagraphStyle(
             'Footer',
             parent=self.styles['Normal'],
-            fontSize=8,
+            fontSize=7,
             fontName='Helvetica',
             alignment=1,  # Zentriert
             spaceBefore=0.2*cm,
@@ -247,14 +249,11 @@ class ProfileGenerator:
                     os.makedirs(sources_dir, exist_ok=True)
                     print(f"Verzeichnis '{sources_dir}' wurde erstellt")
             
-            # Für Profil Überschrift zunächst etwas Abstand hinzufügen
-            elements.append(Spacer(1, 1.0*cm))
-            
             # GALDORA Logo aus dem sources-Ordner einbinden
-            # Wir verwenden jetzt das neue Logo mit Dateinamen Galdoralogo.png (mit großem G)
+            # Logo weiter nach oben schieben (ohne Abstand)
             logo_path = os.path.join(sources_dir, 'Galdoralogo.png')
             
-            # Erstelle eine Tabelle für das Logo links oben (nicht gestreckt)
+            # Erstelle eine Tabelle für das Logo oben
             if os.path.exists(logo_path) and os.path.isfile(logo_path):
                 try:
                     # Logo-Größe korrigieren (Original-Proportionen beibehalten)
@@ -264,17 +263,18 @@ class ProfileGenerator:
                     img_width, img_height = img_pil.size
                     aspect_ratio = img_width / img_height
                     
-                    # Wir setzen eine größere Breite und berechnen die Höhe entsprechend
-                    target_width = 250  # Vergrößert von 120 auf 250
+                    # Anpassung an das Design (kleineres Logo)
+                    target_width = 180
                     target_height = target_width / aspect_ratio
                     
                     img = Image(logo_path, width=target_width, height=target_height)
                     # Logo-Tabelle für korrektes Alignment links
-                    logo_table = Table([[img]], colWidths=[400])
+                    logo_table = Table([[img]], colWidths=[A4[0] - 40*mm])
                     logo_table.setStyle(TableStyle([('ALIGN', (0, 0), (0, 0), 'LEFT')]))
                     elements.append(logo_table)
                     
-                    # Tagline wird entfernt
+                    # Kleinerer Abstand nach dem Logo
+                    elements.append(Spacer(1, 0.3*cm))
                 except Exception as e:
                     print(f"Fehler beim Laden des Logos: {str(e)}")
                     # Fallback wenn Bild nicht geladen werden konnte
@@ -284,13 +284,13 @@ class ProfileGenerator:
                 # Fallback wenn Bild nicht gefunden wurde
                 elements.append(Paragraph("GALDORA", self.custom_styles['GaldoraLogo']))
             
-            # Profil Überschrift
+            # Profil Überschrift - nach links ausgerichtet
             elements.append(Paragraph("Profil", self.custom_styles['ProfilTitle']))
             
             # Persönliche Daten
             personal_data = profile_data.get('persönliche_daten', {})
             
-            # Name
+            # Name - nach links ausgerichtet wie gewünscht
             name = personal_data.get('name', 'Profil')
             elements.append(Paragraph(name, self.custom_styles['Name']))
             
@@ -305,17 +305,17 @@ class ProfileGenerator:
             telefon = kontakt.get('telefon', '02161 62126-02')
             email = kontakt.get('email', f"{nachname.lower()}@galdora.de")
                 
-            # Erstelle Layout für Ansprechpartner (grau und 2cm nach rechts eingerückt)
+            # Erstelle Layout für Ansprechpartner
             elements.append(Paragraph(anrede, self.custom_styles['ContactData']))
-            elements.append(Paragraph(f"{telefon}", self.custom_styles['ContactData']))  # Ohne "Telefon:"
-            elements.append(Paragraph(f"{email}", self.custom_styles['ContactData']))    # Ohne "E-Mail:"
+            elements.append(Paragraph(f"{telefon}", self.custom_styles['ContactData']))
+            elements.append(Paragraph(f"{email}", self.custom_styles['ContactData']))
             
             # Horizontale Linie nach Ansprechpartner mit etwas Abstand
             elements.append(Spacer(1, 0.5*cm))
             elements.append(HRFlowable(width="100%", thickness=1, lineCap='round', color=colors.lightgrey))
             elements.append(Spacer(1, 0.5*cm))
             
-            # Persönliche Informationen in einer Zeile mit Wert
+            # Persönliche Informationen
             elements.append(Paragraph(f"Wohnort: {personal_data.get('wohnort', '')}", self.custom_styles['LabelInline']))
             elements.append(Paragraph(f"Jahrgang: {personal_data.get('jahrgang', '')}", self.custom_styles['LabelInline']))
             elements.append(Paragraph(f"Führerschein: {personal_data.get('führerschein', '')}", self.custom_styles['LabelInline']))
@@ -325,10 +325,15 @@ class ProfileGenerator:
             if wunschgehalt:
                 elements.append(Paragraph(f"Gehalt: {wunschgehalt}", self.custom_styles['LabelInline']))
             
+            # Zusätzliche Trennlinie vor dem beruflichen Werdegang
+            elements.append(Spacer(1, 0.5*cm))
+            elements.append(HRFlowable(width="100%", thickness=1, lineCap='round', color=colors.lightgrey))
+            elements.append(Spacer(1, 0.3*cm))
+            
             # Beruflicher Werdegang (unterstrichen)
             elements.append(Paragraph("Beruflicher Werdegang", self.custom_styles['Heading2']))
             
-            # Berufserfahrung mit einheitlicher Struktur basierend auf Profilvorlage (Zeitraum links, Rest rechts)
+            # Berufserfahrung mit einheitlicher Struktur basierend auf dem Design
             berufserfahrung = profile_data.get('berufserfahrung', [])
             if berufserfahrung:
                 for erfahrung in berufserfahrung:
@@ -346,7 +351,7 @@ class ProfileGenerator:
                         for i, aufgabe in enumerate(aufgaben[:4]):  # Maximal 4 Aufgaben
                             aufgaben_formatted.append(Paragraph(f"• {aufgabe}", self.custom_styles['Normal']))
                         
-                        # Erstelle zweispaltiges Layout wie in der Vorlage
+                        # Erstelle zweispaltiges Layout mit mehr Platz für die rechte Spalte
                         # Linke Spalte: Zeitraum
                         # Rechte Spalte: Unternehmen, Position, Aufgaben
                         
@@ -366,19 +371,19 @@ class ProfileGenerator:
                         for i in range(1, len(right_column_content)):
                             data.append([Paragraph('', self.custom_styles['Normal']), right_column_content[i]])
                         
-                        # Tabelle mit definierter Breite (25% links, 75% rechts)
-                        col_widths = [A4[0] * 0.15, A4[0] * 0.65]  # ca. 15% links, 65% rechts
+                        # Tabelle mit definierter Breite (10% links, 75% rechts) - mehr Platz für die rechte Spalte
+                        col_widths = [A4[0] * 0.12, A4[0] * 0.68]
                         
                         table = Table(data, colWidths=col_widths)
                         table.setStyle(TableStyle([
                             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                             ('ALIGN', (0, 0), (0, -1), 'LEFT'),
                             ('ALIGN', (1, 0), (1, -1), 'LEFT'),
-                            ('LEFTPADDING', (1, 0), (1, -1), 10),  # Etwas Abstand zwischen den Spalten
+                            ('LEFTPADDING', (1, 0), (1, -1), 20),  # Erhöhter Abstand zwischen den Spalten
                         ]))
                         
                         elements.append(table)
-                        elements.append(Spacer(1, 0.4*cm))
+                        elements.append(Spacer(1, 0.3*cm))
                     except Exception as e:
                         print(f"Fehler bei der Verarbeitung einer Berufserfahrung: {str(e)}")
                         # Einfache Darstellung als Fallback
@@ -387,8 +392,8 @@ class ProfileGenerator:
             else:
                 elements.append(Paragraph("Keine Berufserfahrung angegeben", self.custom_styles['Normal']))
             
-            # Ausbildung/ Weiterbildung (unterstrichen) - direkt nach beruflichem Werdegang, keine neue Seite
-            elements.append(Spacer(1, 0.8*cm))  # Etwas mehr Abstand zwischen den Abschnitten
+            # Ausbildung/ Weiterbildung
+            elements.append(Spacer(1, 0.5*cm))
             elements.append(Paragraph("Ausbildung/ Weiterbildung", self.custom_styles['Heading2']))
             
             # Ausbildungen im gleichen Format wie Berufserfahrung darstellen
@@ -425,26 +430,26 @@ class ProfileGenerator:
                         if note:
                             right_column_content.append(Paragraph(f"Abschlussnote {note}", self.custom_styles['Normal']))
                         
-                        # Erstelle zweispaltiges Layout
+                        # Erstelle zweispaltiges Layout mit mehr Platz für die rechte Spalte
                         data = [[Paragraph(zeitraum, self.custom_styles['Period']), right_column_content[0]]]
                         
                         # Füge weitere Zeilen hinzu
                         for i in range(1, len(right_column_content)):
                             data.append([Paragraph('', self.custom_styles['Normal']), right_column_content[i]])
                         
-                        # Tabelle mit definierter Breite (15% links, 65% rechts)
-                        col_widths = [A4[0] * 0.15, A4[0] * 0.65]
+                        # Tabelle mit definierter Breite (10% links, 75% rechts)
+                        col_widths = [A4[0] * 0.12, A4[0] * 0.68]
                         
                         table = Table(data, colWidths=col_widths)
                         table.setStyle(TableStyle([
                             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                             ('ALIGN', (0, 0), (0, -1), 'LEFT'),
                             ('ALIGN', (1, 0), (1, -1), 'LEFT'),
-                            ('LEFTPADDING', (1, 0), (1, -1), 10),  # Etwas Abstand zwischen den Spalten
+                            ('LEFTPADDING', (1, 0), (1, -1), 20),  # Erhöhter Abstand zwischen den Spalten
                         ]))
                         
                         elements.append(table)
-                        elements.append(Spacer(1, 0.4*cm))
+                        elements.append(Spacer(1, 0.3*cm))
                     except Exception as e:
                         print(f"Fehler bei der Verarbeitung einer Ausbildung: {str(e)}")
                         # Einfache Darstellung als Fallback
@@ -468,7 +473,7 @@ class ProfileGenerator:
                         # Rechte Spalte Inhalte
                         right_column_content = []
                         
-                        # Formatieren wie gewünscht
+                        # Formatieren wie im Design
                         if "zum" in bezeichnung or "zur" in bezeichnung:
                             right_column_content.append(Paragraph(f"Fortbildung {bezeichnung}", self.custom_styles['Company']))
                         else:
@@ -478,26 +483,26 @@ class ProfileGenerator:
                         if abschluss and abschluss not in bezeichnung:
                             right_column_content.append(Paragraph(f"Abschluss: {abschluss}", self.custom_styles['Normal']))
                         
-                        # Erstelle zweispaltiges Layout
+                        # Erstelle zweispaltiges Layout mit mehr Platz für die rechte Spalte
                         data = [[Paragraph(zeitraum, self.custom_styles['Period']), right_column_content[0]]]
                         
                         # Füge weitere Zeilen hinzu
                         for i in range(1, len(right_column_content)):
                             data.append([Paragraph('', self.custom_styles['Normal']), right_column_content[i]])
                         
-                        # Tabelle mit definierter Breite (15% links, 65% rechts)
-                        col_widths = [A4[0] * 0.15, A4[0] * 0.65]
+                        # Tabelle mit definierter Breite (10% links, 75% rechts)
+                        col_widths = [A4[0] * 0.12, A4[0] * 0.68]
                         
                         table = Table(data, colWidths=col_widths)
                         table.setStyle(TableStyle([
                             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                             ('ALIGN', (0, 0), (0, -1), 'LEFT'),
                             ('ALIGN', (1, 0), (1, -1), 'LEFT'),
-                            ('LEFTPADDING', (1, 0), (1, -1), 10),  # Etwas Abstand zwischen den Spalten
+                            ('LEFTPADDING', (1, 0), (1, -1), 20),  # Erhöhter Abstand zwischen den Spalten
                         ]))
                         
                         elements.append(table)
-                        elements.append(Spacer(1, 0.4*cm))
+                        elements.append(Spacer(1, 0.3*cm))
                     except Exception as e:
                         print(f"Fehler bei der Verarbeitung einer Weiterbildung: {str(e)}")
                         # Einfache Darstellung als Fallback
@@ -507,7 +512,7 @@ class ProfileGenerator:
                 elements.append(Paragraph("Keine Weiterbildungen angegeben", self.custom_styles['Normal']))
             
             # Footer mit GALDORA Kontaktinformationen
-            elements.append(Spacer(1, 1.0*cm))
+            elements.append(Spacer(1, 1.5*cm))
             elements.append(HRFlowable(width="100%", thickness=1, lineCap='round', color=colors.lightgrey, spaceBefore=0.5*cm))
             elements.append(Spacer(1, 0.2*cm))
             
