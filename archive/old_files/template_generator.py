@@ -96,8 +96,7 @@ class ProfileGenerator:
             fontName='Helvetica-Bold',
             textColor=colors.HexColor('#1973B8'),  # GALDORA Blau
             spaceBefore=0.5*cm,
-            spaceAfter=0.2*cm,
-            underline=1  # Unterstreichung hinzugefügt
+            spaceAfter=0.2*cm
         )
         
         # Name
@@ -129,18 +128,7 @@ class ProfileGenerator:
             fontSize=10,
             fontName='Helvetica-Bold',
             spaceBefore=0.2*cm,
-            spaceAfter=0.5*cm,  # Erhöht von 0.1 auf 0.5 cm
-            underline=1  # Unterstreichung hinzugefügt
-        )
-        
-        # Ansprechpartner Daten (grau)
-        custom_styles['ContactData'] = ParagraphStyle(
-            'ContactData',
-            parent=self.styles['Normal'],
-            fontSize=10,
-            textColor=colors.grey,
-            spaceAfter=0.2*cm,
-            leftIndent=2*cm  # 2cm nach rechts eingerückt
+            spaceAfter=0.1*cm
         )
         
         # Normaler Text
@@ -149,15 +137,6 @@ class ProfileGenerator:
             parent=self.styles['Normal'],
             fontSize=10,
             spaceAfter=0.2*cm
-        )
-        
-        # Label-Text (fett) mit Text in gleicher Zeile
-        custom_styles['LabelInline'] = ParagraphStyle(
-            'LabelInline',
-            parent=self.styles['Normal'],
-            fontSize=10,
-            fontName='Helvetica-Bold',
-            spaceAfter=0.1*cm
         )
         
         # Label-Text (fett)
@@ -237,7 +216,7 @@ class ProfileGenerator:
         try:
             # Korrekte Pfade zum Verzeichnis der Quellendateien
             current_dir = os.path.dirname(os.path.abspath(__file__))
-            sources_dir = os.path.join(os.path.dirname(os.path.dirname(current_dir)), 'sources')
+            sources_dir = os.path.join(current_dir, 'sources')
             
             # Wenn sources nicht existiert, versuche relative Pfade vom Arbeitsverzeichnis
             if not os.path.exists(sources_dir):
@@ -247,42 +226,33 @@ class ProfileGenerator:
                     os.makedirs(sources_dir, exist_ok=True)
                     print(f"Verzeichnis '{sources_dir}' wurde erstellt")
             
-            # Für Profil Überschrift zunächst etwas Abstand hinzufügen
-            elements.append(Spacer(1, 1.0*cm))
-            
             # GALDORA Logo aus dem sources-Ordner einbinden
-            # Wir verwenden jetzt das neue Logo mit Dateinamen Galdoralogo.png (mit großem G)
-            logo_path = os.path.join(sources_dir, 'Galdoralogo.png')
+            logo_path = os.path.join(sources_dir, 'galdoralogo.png')
             
             # Erstelle eine Tabelle für das Logo links oben (nicht gestreckt)
             if os.path.exists(logo_path) and os.path.isfile(logo_path):
                 try:
                     # Logo-Größe korrigieren (Original-Proportionen beibehalten)
-                    # Wir laden und messen zuerst das Bild, um das richtige Seitenverhältnis zu bekommen
-                    from PIL import Image as PILImage
-                    img_pil = PILImage.open(logo_path)
-                    img_width, img_height = img_pil.size
-                    aspect_ratio = img_width / img_height
-                    
-                    # Wir setzen eine größere Breite und berechnen die Höhe entsprechend
-                    target_width = 250  # Vergrößert von 120 auf 250
-                    target_height = target_width / aspect_ratio
-                    
-                    img = Image(logo_path, width=target_width, height=target_height)
+                    img = Image(logo_path, width=120, height=20)  # Korrigierte Größe mit besseren Proportionen
                     # Logo-Tabelle für korrektes Alignment links
                     logo_table = Table([[img]], colWidths=[400])
                     logo_table.setStyle(TableStyle([('ALIGN', (0, 0), (0, 0), 'LEFT')]))
                     elements.append(logo_table)
                     
-                    # Tagline wird entfernt
+                    # Tagline in eigener Tabelle für korrekte Ausrichtung
+                    tagline_table = Table([[Paragraph("Ich bin, was wir tun", self.custom_styles['Tagline'])]], colWidths=[400])
+                    tagline_table.setStyle(TableStyle([('ALIGN', (0, 0), (0, 0), 'LEFT')]))
+                    elements.append(tagline_table)
                 except Exception as e:
                     print(f"Fehler beim Laden des Logos: {str(e)}")
                     # Fallback wenn Bild nicht geladen werden konnte
                     elements.append(Paragraph("GALDORA", self.custom_styles['GaldoraLogo']))
+                    elements.append(Paragraph("Ich bin, was wir tun", self.custom_styles['Tagline']))
             else:
                 print(f"Logo-Datei nicht gefunden: {logo_path}")
                 # Fallback wenn Bild nicht gefunden wurde
                 elements.append(Paragraph("GALDORA", self.custom_styles['GaldoraLogo']))
+                elements.append(Paragraph("Ich bin, was wir tun", self.custom_styles['Tagline']))
             
             # Profil Überschrift
             elements.append(Paragraph("Profil", self.custom_styles['ProfilTitle']))
@@ -305,80 +275,99 @@ class ProfileGenerator:
             telefon = kontakt.get('telefon', '02161 62126-02')
             email = kontakt.get('email', f"{nachname.lower()}@galdora.de")
                 
-            # Erstelle Layout für Ansprechpartner (grau und 2cm nach rechts eingerückt)
-            elements.append(Paragraph(anrede, self.custom_styles['ContactData']))
-            elements.append(Paragraph(f"{telefon}", self.custom_styles['ContactData']))  # Ohne "Telefon:"
-            elements.append(Paragraph(f"{email}", self.custom_styles['ContactData']))    # Ohne "E-Mail:"
+            # Erstelle Layout für Ansprechpartner
+            elements.append(Paragraph(anrede, self.custom_styles['Normal']))
+            elements.append(Paragraph(f"Telefon: {telefon}", self.custom_styles['Normal']))
+            elements.append(Paragraph(f"E-Mail: {email}", self.custom_styles['Normal']))
             
             # Horizontale Linie nach Ansprechpartner mit etwas Abstand
-            elements.append(Spacer(1, 0.5*cm))
+            elements.append(Spacer(1, 0.8*cm))
             elements.append(HRFlowable(width="100%", thickness=1, lineCap='round', color=colors.lightgrey))
-            elements.append(Spacer(1, 0.5*cm))
+            elements.append(Spacer(1, 0.2*cm))
             
-            # Persönliche Informationen in einer Zeile mit Wert
-            elements.append(Paragraph(f"Wohnort: {personal_data.get('wohnort', '')}", self.custom_styles['LabelInline']))
-            elements.append(Paragraph(f"Jahrgang: {personal_data.get('jahrgang', '')}", self.custom_styles['LabelInline']))
-            elements.append(Paragraph(f"Führerschein: {personal_data.get('führerschein', '')}", self.custom_styles['LabelInline']))
+            # Persönliche Informationen (aus Profilvorlage Seite 1)
+            elements.append(Paragraph("Wohnort:", self.custom_styles['Label']))
+            elements.append(Paragraph(personal_data.get('wohnort', ''), self.custom_styles['Normal']))
+            
+            elements.append(Paragraph("Jahrgang:", self.custom_styles['Label']))
+            elements.append(Paragraph(personal_data.get('jahrgang', ''), self.custom_styles['Normal']))
+            
+            elements.append(Paragraph("Führerschein:", self.custom_styles['Label']))
+            elements.append(Paragraph(personal_data.get('führerschein', ''), self.custom_styles['Normal']))
             
             # Wunschgehalt (wenn vorhanden)
             wunschgehalt = profile_data.get('wunschgehalt', '')
             if wunschgehalt:
-                elements.append(Paragraph(f"Gehalt: {wunschgehalt}", self.custom_styles['LabelInline']))
+                elements.append(Paragraph("Gehalt:", self.custom_styles['Label']))
+                elements.append(Paragraph(wunschgehalt, self.custom_styles['Normal']))
             
-            # Beruflicher Werdegang (unterstrichen)
+            # Beruflicher Werdegang
             elements.append(Paragraph("Beruflicher Werdegang", self.custom_styles['Heading2']))
             
-            # Berufserfahrung mit einheitlicher Struktur basierend auf Profilvorlage (Zeitraum links, Rest rechts)
+            # Berufserfahrung mit 2-spaltigem Layout (Daten links, Aufgaben rechts)
             berufserfahrung = profile_data.get('berufserfahrung', [])
             if berufserfahrung:
                 for erfahrung in berufserfahrung:
                     try:
                         # Zeitraum
                         zeitraum = erfahrung.get('zeitraum', '')
-                        
-                        # Unternehmen und Position
                         unternehmen = erfahrung.get('unternehmen', '')
                         position = erfahrung.get('position', '')
                         
-                        # Aufgaben auf maximal 4 begrenzen
+                        # Aufgaben vorbereiten und auf max. 4 (idealerweise 3) begrenzen
                         aufgaben = erfahrung.get('aufgaben', [])
                         aufgaben_formatted = []
-                        for i, aufgabe in enumerate(aufgaben[:4]):  # Maximal 4 Aufgaben
-                            aufgaben_formatted.append(Paragraph(f"• {aufgabe}", self.custom_styles['Normal']))
                         
-                        # Erstelle zweispaltiges Layout wie in der Vorlage
-                        # Linke Spalte: Zeitraum
-                        # Rechte Spalte: Unternehmen, Position, Aufgaben
+                        # Wenn zu viele Aufgaben, reduziere auf 3 zusammengefasste Punkte
+                        if len(aufgaben) > 4:
+                            # Wir teilen die Aufgaben in drei Gruppen und fassen jede zusammen
+                            chunks = [aufgaben[i:i + len(aufgaben)//3 + (1 if i < len(aufgaben) % 3 else 0)] 
+                                      for i in range(0, len(aufgaben), len(aufgaben)//3 + (1 if 0 < len(aufgaben) % 3 else 0))]
+                            
+                            for chunk in chunks[:3]:  # Maximal 3 zusammengefasste Punkte
+                                combined = "; ".join(chunk)
+                                aufgaben_formatted.append(Paragraph(f"• {combined}", self.custom_styles['Normal']))
+                        else:
+                            # Wenn 4 oder weniger Aufgaben, behalte sie einzeln bei
+                            for i, aufgabe in enumerate(aufgaben[:4]):  # Maximal 4 Aufgaben
+                                aufgaben_formatted.append(Paragraph(f"• {aufgabe}", self.custom_styles['Normal']))
                         
-                        # Bereite die rechte Spalte vor
-                        right_column_content = [
+                        # Linke Spalte mit Zeitraum, Unternehmen und Position
+                        left_column = [
+                            Paragraph(zeitraum, self.custom_styles['Period']),
                             Paragraph(unternehmen, self.custom_styles['Company']),
                             Paragraph(position, self.custom_styles['Position'])
                         ]
                         
-                        # Aufgaben zur rechten Spalte hinzufügen
-                        right_column_content.extend(aufgaben_formatted)
+                        # Rechte Spalte mit Aufgaben
+                        right_column = aufgaben_formatted
                         
-                        # Bereite die Tabellendaten vor
-                        data = [[Paragraph(zeitraum, self.custom_styles['Period']), right_column_content[0]]]
+                        # Ausgleich für den Fall, dass eine Spalte mehr Zeilen hat als die andere
+                        max_rows = max(len(left_column), len(right_column))
                         
-                        # Füge weitere Zeilen hinzu
-                        for i in range(1, len(right_column_content)):
-                            data.append([Paragraph('', self.custom_styles['Normal']), right_column_content[i]])
+                        while len(left_column) < max_rows:
+                            left_column.append(Paragraph("", self.custom_styles['Normal']))
                         
-                        # Tabelle mit definierter Breite (25% links, 75% rechts)
-                        col_widths = [A4[0] * 0.15, A4[0] * 0.65]  # ca. 15% links, 65% rechts
+                        while len(right_column) < max_rows:
+                            right_column.append(Paragraph("", self.custom_styles['Normal']))
+                        
+                        # Erstelle die Tabelle mit den zwei Spalten
+                        data = []
+                        for i in range(max_rows):
+                            data.append([left_column[i], right_column[i]])
+                        
+                        # Tabelle mit definierter Breite (30% links, 70% rechts)
+                        col_widths = [A4[0] * 0.25, A4[0] * 0.55]  # Ungefähr 30% und 70% der Seitenbreite
                         
                         table = Table(data, colWidths=col_widths)
                         table.setStyle(TableStyle([
                             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                             ('ALIGN', (0, 0), (0, -1), 'LEFT'),
                             ('ALIGN', (1, 0), (1, -1), 'LEFT'),
-                            ('LEFTPADDING', (1, 0), (1, -1), 10),  # Etwas Abstand zwischen den Spalten
                         ]))
                         
                         elements.append(table)
-                        elements.append(Spacer(1, 0.4*cm))
+                        elements.append(Spacer(1, 0.3*cm))
                     except Exception as e:
                         print(f"Fehler bei der Verarbeitung einer Berufserfahrung: {str(e)}")
                         # Einfache Darstellung als Fallback
@@ -387,64 +376,66 @@ class ProfileGenerator:
             else:
                 elements.append(Paragraph("Keine Berufserfahrung angegeben", self.custom_styles['Normal']))
             
-            # Ausbildung/ Weiterbildung (unterstrichen) - direkt nach beruflichem Werdegang, keine neue Seite
-            elements.append(Spacer(1, 0.8*cm))  # Etwas mehr Abstand zwischen den Abschnitten
+            # Zweite Seite für Ausbildung/Weiterbildung
+            elements.append(PageBreak())
+            
+            # Logo auf der zweiten Seite wiederholen
+            if os.path.exists(logo_path) and os.path.isfile(logo_path):
+                try:
+                    # Logo-Größe korrigieren (Original-Proportionen beibehalten)
+                    img = Image(logo_path, width=120, height=20)  # Korrigierte Größe mit besseren Proportionen
+                    # Logo-Tabelle für korrektes Alignment links
+                    logo_table = Table([[img]], colWidths=[400])
+                    logo_table.setStyle(TableStyle([('ALIGN', (0, 0), (0, 0), 'LEFT')]))
+                    elements.append(logo_table)
+                    
+                    # Tagline in eigener Tabelle für korrekte Ausrichtung
+                    tagline_table = Table([[Paragraph("Ich bin, was wir tun", self.custom_styles['Tagline'])]], colWidths=[400])
+                    tagline_table.setStyle(TableStyle([('ALIGN', (0, 0), (0, 0), 'LEFT')]))
+                    elements.append(tagline_table)
+                except Exception as e:
+                    print(f"Fehler beim Laden des Logos auf Seite 2: {str(e)}")
+                    # Fallback wenn Bild nicht geladen werden konnte
+                    elements.append(Paragraph("GALDORA", self.custom_styles['GaldoraLogo']))
+                    elements.append(Paragraph("Ich bin, was wir tun", self.custom_styles['Tagline']))
+            else:
+                # Fallback wenn Bild nicht gefunden wurde
+                elements.append(Paragraph("GALDORA", self.custom_styles['GaldoraLogo']))
+                elements.append(Paragraph("Ich bin, was wir tun", self.custom_styles['Tagline']))
+            
+            # Ausbildung
             elements.append(Paragraph("Ausbildung/ Weiterbildung", self.custom_styles['Heading2']))
             
-            # Ausbildungen im gleichen Format wie Berufserfahrung darstellen
+            # Ausbildungen
             ausbildungen = profile_data.get('ausbildung', [])
             if ausbildungen:
                 for ausbildung in ausbildungen:
                     try:
                         # Zeitraum
                         zeitraum = ausbildung.get('zeitraum', '')
+                        elements.append(Paragraph(zeitraum, self.custom_styles['Period']))
                         
                         # Institution und Abschluss
                         institution = ausbildung.get('institution', '')
                         abschluss = ausbildung.get('abschluss', '')
+                        elements.append(Paragraph(f"Studium {institution}", self.custom_styles['Company']))
                         
                         # Studienschwerpunkte
                         schwerpunkte = ausbildung.get('schwerpunkte', '')
-                        
-                        # Rechte Spalte Inhalte
-                        right_column_content = []
-                        
-                        # Institution/Abschluss formatieren
-                        if institution.startswith("Studium"):
-                            right_column_content.append(Paragraph(institution, self.custom_styles['Company']))
-                        else:
-                            right_column_content.append(Paragraph(f"Studium {institution}", self.custom_styles['Company']))
-                        
                         if schwerpunkte:
-                            right_column_content.append(Paragraph(f"Studienschwerpunkte: {schwerpunkte}", self.custom_styles['Normal']))
+                            elements.append(Paragraph(f"Studienschwerpunkte: {schwerpunkte}", self.custom_styles['Normal']))
+                        
+                        # Abschluss
                         if abschluss:
-                            right_column_content.append(Paragraph(f"Abschluss: {abschluss}", self.custom_styles['Normal']))
+                            elements.append(Paragraph(f"Abschluss: {abschluss}", self.custom_styles['Normal']))
                         
                         # Note 
                         note = ausbildung.get('note', '')
                         if note:
-                            right_column_content.append(Paragraph(f"Abschlussnote {note}", self.custom_styles['Normal']))
+                            elements.append(Paragraph(f"Abschlussnote {note}", self.custom_styles['Normal']))
                         
-                        # Erstelle zweispaltiges Layout
-                        data = [[Paragraph(zeitraum, self.custom_styles['Period']), right_column_content[0]]]
-                        
-                        # Füge weitere Zeilen hinzu
-                        for i in range(1, len(right_column_content)):
-                            data.append([Paragraph('', self.custom_styles['Normal']), right_column_content[i]])
-                        
-                        # Tabelle mit definierter Breite (15% links, 65% rechts)
-                        col_widths = [A4[0] * 0.15, A4[0] * 0.65]
-                        
-                        table = Table(data, colWidths=col_widths)
-                        table.setStyle(TableStyle([
-                            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-                            ('ALIGN', (1, 0), (1, -1), 'LEFT'),
-                            ('LEFTPADDING', (1, 0), (1, -1), 10),  # Etwas Abstand zwischen den Spalten
-                        ]))
-                        
-                        elements.append(table)
-                        elements.append(Spacer(1, 0.4*cm))
+                        # Abstand
+                        elements.append(Spacer(1, 0.3*cm))
                     except Exception as e:
                         print(f"Fehler bei der Verarbeitung einer Ausbildung: {str(e)}")
                         # Einfache Darstellung als Fallback
@@ -453,51 +444,30 @@ class ProfileGenerator:
             else:
                 elements.append(Paragraph("Keine Ausbildung angegeben", self.custom_styles['Normal']))
             
-            # Weiterbildungen im gleichen Format wie Berufserfahrung darstellen
+            # Weiterbildungen
             weiterbildungen = profile_data.get('weiterbildungen', [])
             if weiterbildungen:
                 for weiterbildung in weiterbildungen:
                     try:
                         # Zeitraum
                         zeitraum = weiterbildung.get('zeitraum', '')
+                        elements.append(Paragraph(zeitraum, self.custom_styles['Period']))
                         
                         # Bezeichnung und Abschluss
                         bezeichnung = weiterbildung.get('bezeichnung', '')
                         abschluss = weiterbildung.get('abschluss', '')
                         
-                        # Rechte Spalte Inhalte
-                        right_column_content = []
-                        
-                        # Formatieren wie gewünscht
-                        if "zum" in bezeichnung or "zur" in bezeichnung:
-                            right_column_content.append(Paragraph(f"Fortbildung {bezeichnung}", self.custom_styles['Company']))
+                        if "Fortbildung" in bezeichnung:
+                            elements.append(Paragraph(bezeichnung, self.custom_styles['Company']))
                         else:
-                            right_column_content.append(Paragraph(f"Fortbildung zum {bezeichnung}", self.custom_styles['Company']))
+                            elements.append(Paragraph(f"Fortbildung {bezeichnung}", self.custom_styles['Company']))
                         
-                        # Abschluss nur anzeigen, wenn nicht leer und nicht bereits in Bezeichnung enthalten
-                        if abschluss and abschluss not in bezeichnung:
-                            right_column_content.append(Paragraph(f"Abschluss: {abschluss}", self.custom_styles['Normal']))
+                        # Abschluss
+                        if abschluss:
+                            elements.append(Paragraph(f"Abschluss: {abschluss}", self.custom_styles['Normal']))
                         
-                        # Erstelle zweispaltiges Layout
-                        data = [[Paragraph(zeitraum, self.custom_styles['Period']), right_column_content[0]]]
-                        
-                        # Füge weitere Zeilen hinzu
-                        for i in range(1, len(right_column_content)):
-                            data.append([Paragraph('', self.custom_styles['Normal']), right_column_content[i]])
-                        
-                        # Tabelle mit definierter Breite (15% links, 65% rechts)
-                        col_widths = [A4[0] * 0.15, A4[0] * 0.65]
-                        
-                        table = Table(data, colWidths=col_widths)
-                        table.setStyle(TableStyle([
-                            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-                            ('ALIGN', (1, 0), (1, -1), 'LEFT'),
-                            ('LEFTPADDING', (1, 0), (1, -1), 10),  # Etwas Abstand zwischen den Spalten
-                        ]))
-                        
-                        elements.append(table)
-                        elements.append(Spacer(1, 0.4*cm))
+                        # Abstand
+                        elements.append(Spacer(1, 0.3*cm))
                     except Exception as e:
                         print(f"Fehler bei der Verarbeitung einer Weiterbildung: {str(e)}")
                         # Einfache Darstellung als Fallback

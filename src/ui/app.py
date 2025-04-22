@@ -639,12 +639,17 @@ def reset_session():
     st.session_state.edited_data = {}
     st.session_state.preview_pdf = None
     # Temporäre Dateien aufräumen
-    for temp_file in st.session_state.temp_files:
-        try:
-            os.unlink(temp_file)
-        except:
-            pass
-    st.session_state.temp_files = []
+    if 'temp_files' in st.session_state:
+        for temp_file in st.session_state.temp_files:
+            try:
+                if os.path.exists(temp_file):
+                    os.unlink(temp_file)
+            except Exception as e:
+                print(f"Fehler beim Löschen von Temp-Datei: {str(e)}")
+        st.session_state.temp_files = []
+    else:
+        # Initialisiere temp_files, falls es noch nicht existiert
+        st.session_state.temp_files = []
     # Demo-Modus zurücksetzen
     st.session_state.demo_mode = False
 
@@ -655,9 +660,19 @@ def display_pdf(file_path):
         # Zeige eine Fehlermeldung statt des PDFs an
         return '<div style="text-align: center; padding: 20px; background-color: #f8d7da; color: #721c24; border-radius: 5px;">PDF-Vorschau nicht verfügbar. Bitte aktualisieren Sie die Vorschau.</div>'
     
+    # Prüfe, ob die Datei existiert
+    if not os.path.exists(file_path):
+        return '<div style="text-align: center; padding: 20px; background-color: #f8d7da; color: #721c24; border-radius: 5px;">PDF-Datei existiert nicht. Bitte generieren Sie die Vorschau erneut.</div>'
+    
     try:
+        # Prüfe, ob die Datei eine gültige PDF-Datei ist
         with open(file_path, "rb") as f:
-            base64_pdf = base64.b64encode(f.read()).decode('utf-8')
+            file_content = f.read()
+            # Prüfe auf PDF-Signatur (%PDF-)
+            if not file_content.startswith(b'%PDF-'):
+                return '<div style="text-align: center; padding: 20px; background-color: #f8d7da; color: #721c24; border-radius: 5px;">Die Datei ist keine gültige PDF-Datei. Bitte generieren Sie die Vorschau erneut.</div>'
+            
+            base64_pdf = base64.b64encode(file_content).decode('utf-8')
         
         # Alternative PDF-Anzeige, die besser mit Chrome-Sicherheitsrichtlinien kompatibel ist
         pdf_display = f'''
@@ -1623,10 +1638,14 @@ def cleanup():
                 try:
                     if os.path.exists(temp_file):
                         os.unlink(temp_file)
+                        print(f"Temporäre Datei gelöscht: {temp_file}")
                 except Exception as e:
                     print(f"Fehler beim Löschen der temporären Datei {temp_file}: {str(e)}")
     except Exception as e:
         print(f"Fehler beim Aufräumen: {str(e)}")
+    finally:
+        # Sicherstellen, dass keine Fehler unbehandelt bleiben
+        print("Cleanup abgeschlossen.")
 
 # Cleanup-Funktion registrieren
 import atexit
