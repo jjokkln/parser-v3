@@ -1,14 +1,12 @@
 # Archivierte App-Versionen
 
-## ACHTUNG! VERALTETE DATEIEN
+## HINWEIS
 
-Dieses Verzeichnis enthält archivierte Versionen der CV2Profile-Anwendung, die **nicht mehr mit der aktuellen Projektstruktur kompatibel** sind.
+Dieses Verzeichnis enthielt früher archivierte Versionen der CV2Profile-Anwendung, die **nicht mehr mit der aktuellen Projektstruktur kompatibel** waren.
 
-Diese Dateien werden nur aus historischen Gründen aufbewahrt und sollten nicht direkt verwendet werden. 
+Diese Dateien wurden am 22.04.2024 im Rahmen einer Aufräumaktion entfernt, da sie veraltet waren und nicht mehr benötigt wurden. Die Entfernung wurde durchgeführt, um das Repository schlanker zu halten und Verwirrung zu vermeiden.
 
-Beachten Sie, dass alle diese Dateien die alte Import-Struktur verwenden und direkt auf Module im Hauptverzeichnis verweisen, anstatt auf die strukturierten Module im src-Verzeichnis.
-
-## Inhalt
+## Frühere Inhalte (jetzt entfernt)
 
 - `app_original.py` - Die ursprüngliche App-Version
 - `app_new.py` - Eine neuere App-Version
@@ -20,4 +18,4 @@ Beachten Sie, dass alle diese Dateien die alte Import-Struktur verwenden und dir
 
 ## Aktuelle Version
 
-Die aktuelle Version der Anwendung befindet sich unter `src/ui/app.py` und sollte verwendet werden. 
+Die aktuelle Version der Anwendung befindet sich unter `src/ui/app.py` und sollte verwendet werden. Diese enthält alle UI-Verbesserungen, den Demo-Modus und weitere Optimierungen, die in den früheren Versionen entwickelt wurden. 
