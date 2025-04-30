@@ -7,6 +7,11 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 import io
 import os
+import docx
+from docx.shared import Pt, RGBColor, Inches, Cm
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
 
 class ProfileGenerator:
     """Klasse zur Erstellung von PDF-Profilen aus strukturierten Daten"""
@@ -16,17 +21,18 @@ class ProfileGenerator:
         self.styles = getSampleStyleSheet()
         self.custom_styles = self._create_custom_styles()
     
-    def generate_profile(self, profile_data, output_path, template="professional"):
+    def generate_profile(self, profile_data, output_path, template="professional", format="pdf"):
         """
-        Generiert ein PDF-Profil aus den extrahierten Daten
+        Generiert ein Profil aus den extrahierten Daten im gewünschten Format (PDF oder DOCX)
         
         Args:
             profile_data: Dictionary mit Profildaten
             output_path: Pfad für die Ausgabedatei
             template: Art der Vorlage (professional, classic, modern, minimalist)
+            format: Format der Ausgabedatei ("pdf" oder "docx")
         
         Returns:
-            Pfad zur generierten PDF-Datei
+            Pfad zur generierten Datei
         """
         # Prüfe, ob profile_data ein gültiges Dictionary ist
         if not isinstance(profile_data, dict):
@@ -42,6 +48,30 @@ class ProfileGenerator:
         if output_dir and not os.path.exists(output_dir):
             os.makedirs(output_dir, exist_ok=True)
         
+        # Je nach Format unterschiedliche Generierungsmethode aufrufen
+        if format.lower() == "pdf":
+            return self._generate_pdf_profile(profile_data, output_path, template)
+        elif format.lower() == "docx":
+            # Sicherstellen, dass der Ausgabepfad auf .docx endet
+            if not output_path.lower().endswith('.docx'):
+                base_path = os.path.splitext(output_path)[0]
+                output_path = base_path + '.docx'
+            return self._generate_docx_profile(profile_data, output_path, template)
+        else:
+            raise ValueError(f"Ungültiges Format: {format}. Unterstützte Formate: 'pdf', 'docx'")
+    
+    def _generate_pdf_profile(self, profile_data, output_path, template="professional"):
+        """
+        Generiert ein PDF-Profil aus den extrahierten Daten
+        
+        Args:
+            profile_data: Dictionary mit Profildaten
+            output_path: Pfad für die Ausgabedatei
+            template: Art der Vorlage (professional, classic, modern, minimalist)
+        
+        Returns:
+            Pfad zur generierten PDF-Datei
+        """
         try:
             # Erstelle das PDF-Dokument
             doc = SimpleDocTemplate(
@@ -62,6 +92,284 @@ class ProfileGenerator:
             return output_path
         except Exception as e:
             print(f"Fehler bei der PDF-Generierung: {str(e)}")
+            raise
+    
+    def _generate_docx_profile(self, profile_data, output_path, template="professional"):
+        """
+        Generiert ein Word-Dokument (DOCX) aus den extrahierten Daten
+        
+        Args:
+            profile_data: Dictionary mit Profildaten
+            output_path: Pfad für die Ausgabedatei
+            template: Art der Vorlage (professional, classic, modern, minimalist)
+        
+        Returns:
+            Pfad zur generierten DOCX-Datei
+        """
+        try:
+            # Erstelle ein neues Word-Dokument
+            doc = docx.Document()
+            
+            # Seiteneinstellungen (A4)
+            section = doc.sections[0]
+            section.page_width = Cm(21)
+            section.page_height = Cm(29.7)
+            section.left_margin = Cm(2)
+            section.right_margin = Cm(2)
+            section.top_margin = Cm(2)
+            section.bottom_margin = Cm(2)
+            
+            # Definiere Stile für das Word-Dokument
+            # Header-Style für GALDORA Logo
+            logo_style = doc.styles.add_style('GaldoraLogo', docx.enum.style.WD_STYLE_TYPE.PARAGRAPH)
+            logo_style.font.size = Pt(36)
+            logo_style.font.bold = True
+            logo_style.font.color.rgb = RGBColor(0, 0, 0) # Schwarz
+            
+            # Erstelle Italic Style
+            italic_style = doc.styles.add_style('ItalicStyle', docx.enum.style.WD_STYLE_TYPE.PARAGRAPH)
+            italic_style.font.size = Pt(10)
+            italic_style.font.italic = True
+            
+            # Korrekte Pfade zum Verzeichnis der Quellendateien
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            sources_dir = os.path.join(os.path.dirname(os.path.dirname(current_dir)), 'sources')
+            
+            # Wenn sources nicht existiert, versuche relative Pfade vom Arbeitsverzeichnis
+            if not os.path.exists(sources_dir):
+                sources_dir = 'sources'
+                # Erstelle das Verzeichnis, falls es nicht existiert
+                if not os.path.exists(sources_dir):
+                    os.makedirs(sources_dir, exist_ok=True)
+                    print(f"Verzeichnis '{sources_dir}' wurde erstellt")
+            
+            # Logo einfügen, wenn verfügbar
+            logo_path = os.path.join(sources_dir, 'Galdoralogo.png')
+            
+            if os.path.exists(logo_path) and os.path.isfile(logo_path):
+                # Paragraph für das Logo erstellen
+                paragraph = doc.add_paragraph()
+                paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                run = paragraph.add_run()
+                run.add_picture(logo_path, width=Cm(5))  # Logo mit 5cm Breite einfügen
+            else:
+                # Fallback, wenn kein Logo gefunden wurde
+                header = doc.add_paragraph("GALDORA", style='GaldoraLogo')
+                header.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            
+            # Tagline
+            tagline = doc.add_paragraph("Wir verbinden Menschen und Technologie", style='ItalicStyle')
+            tagline.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            
+            # Füge Leerzeile hinzu
+            doc.add_paragraph()
+            
+            # Überschrift "Profil"
+            title_style = doc.styles.add_style('ProfilTitle', docx.enum.style.WD_STYLE_TYPE.PARAGRAPH)
+            title_style.font.size = Pt(16)
+            title_style.font.bold = True
+            # GALDORA Blau (ca. #1973B8)
+            title_style.font.color.rgb = RGBColor(25, 115, 184)
+            
+            doc.add_paragraph("Profil", style='ProfilTitle')
+            
+            # Persönliche Daten
+            personal_data = profile_data.get("persönliche_daten", {})
+            name = personal_data.get("name", "")
+            doc.add_paragraph(name).bold = True
+            
+            # Erstelle eine 2-spaltige Tabelle für persönliche Daten
+            table = doc.add_table(rows=0, cols=2)
+            table.style = 'Table Grid'
+            table.autofit = True
+            
+            # Wohnort
+            if personal_data.get("wohnort"):
+                row_cells = table.add_row().cells
+                row_cells[0].text = "Wohnort:"
+                row_cells[0].paragraphs[0].runs[0].bold = True
+                row_cells[1].text = personal_data.get("wohnort", "")
+            
+            # Jahrgang
+            if personal_data.get("jahrgang"):
+                row_cells = table.add_row().cells
+                row_cells[0].text = "Jahrgang:"
+                row_cells[0].paragraphs[0].runs[0].bold = True
+                row_cells[1].text = personal_data.get("jahrgang", "")
+            
+            # Führerschein
+            if personal_data.get("führerschein"):
+                row_cells = table.add_row().cells
+                row_cells[0].text = "Führerschein:"
+                row_cells[0].paragraphs[0].runs[0].bold = True
+                row_cells[1].text = personal_data.get("führerschein", "")
+            
+            # Berufserfahrung
+            doc.add_paragraph().add_run().add_break()  # Leerzeile
+            heading_style = doc.styles.add_style('Heading2', docx.enum.style.WD_STYLE_TYPE.PARAGRAPH)
+            heading_style.font.size = Pt(12)
+            heading_style.font.bold = True
+            
+            doc.add_paragraph("Beruflicher Werdegang", style='Heading2')
+            
+            # Füge Berufserfahrung hinzu
+            for experience in profile_data.get("berufserfahrung", []):
+                # Tabelle für jede Berufserfahrung
+                exp_table = doc.add_table(rows=0, cols=2)
+                exp_table.style = 'Table Grid'
+                exp_table.autofit = True
+                
+                # Zeitraum
+                row_cells = exp_table.add_row().cells
+                row_cells[0].text = experience.get("zeitraum", "")
+                row_cells[0].paragraphs[0].runs[0].bold = True
+                
+                # Firma und Position
+                row_cells[1].text = experience.get("firma", "")
+                row_cells[1].paragraphs[0].runs[0].bold = True
+                row_cells[1].add_paragraph(experience.get("position", "")).italic = True
+                
+                # Beschreibung (wenn vorhanden)
+                if experience.get("beschreibung"):
+                    row_cells = exp_table.add_row().cells
+                    row_cells[0].merge(row_cells[1])
+                    row_cells[0].text = experience.get("beschreibung", "")
+                
+                doc.add_paragraph()  # Leerzeile
+            
+            # Ausbildung
+            doc.add_paragraph("Ausbildung", style='Heading2')
+            
+            # Füge Ausbildung hinzu
+            for education in profile_data.get("ausbildung", []):
+                # Tabelle für jede Ausbildung
+                edu_table = doc.add_table(rows=0, cols=2)
+                edu_table.style = 'Table Grid'
+                edu_table.autofit = True
+                
+                # Zeitraum
+                row_cells = edu_table.add_row().cells
+                row_cells[0].text = education.get("zeitraum", "")
+                row_cells[0].paragraphs[0].runs[0].bold = True
+                
+                # Institution und Abschluss
+                row_cells[1].text = education.get("institution", "")
+                row_cells[1].paragraphs[0].runs[0].bold = True
+                row_cells[1].add_paragraph(education.get("abschluss", "")).italic = True
+                
+                doc.add_paragraph()  # Leerzeile
+            
+            # Weiterbildungen
+            if profile_data.get("weiterbildungen"):
+                doc.add_paragraph("Fort- und Weiterbildungen", style='Heading2')
+                
+                # Füge Weiterbildungen hinzu
+                for training in profile_data.get("weiterbildungen", []):
+                    # Tabelle für jede Weiterbildung
+                    train_table = doc.add_table(rows=0, cols=2)
+                    train_table.style = 'Table Grid'
+                    train_table.autofit = True
+                    
+                    # Zeitraum
+                    row_cells = train_table.add_row().cells
+                    row_cells[0].text = training.get("zeitraum", "")
+                    row_cells[0].paragraphs[0].runs[0].bold = True
+                    
+                    # Bezeichnung und Abschluss
+                    row_cells[1].text = training.get("bezeichnung", "")
+                    row_cells[1].paragraphs[0].runs[0].bold = True
+                    
+                    if training.get("abschluss"):
+                        row_cells[1].add_paragraph(training.get("abschluss", "")).italic = True
+                    
+                    doc.add_paragraph()  # Leerzeile
+            
+            # Erstelle Seitenumbruch vor Ansprechpartner-Seite
+            doc.add_page_break()
+            
+            # Ansprechpartner-Seite
+            # Logo einfügen, wenn verfügbar
+            if os.path.exists(logo_path) and os.path.isfile(logo_path):
+                # Paragraph für das Logo erstellen
+                paragraph = doc.add_paragraph()
+                paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                run = paragraph.add_run()
+                run.add_picture(logo_path, width=Cm(5))  # Logo mit 5cm Breite einfügen
+            else:
+                # Fallback, wenn kein Logo gefunden wurde
+                header = doc.add_paragraph("GALDORA", style='GaldoraLogo')
+                header.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            
+            # Tagline
+            tagline = doc.add_paragraph("Wir verbinden Menschen und Technologie", style='ItalicStyle')
+            tagline.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            
+            # Leerzeile
+            doc.add_paragraph()
+            
+            # Ansprechpartner
+            doc.add_paragraph("Kontakt", style='ProfilTitle')
+            
+            # Kontaktdaten
+            contact_data = personal_data.get("kontakt", {})
+            ansprechpartner = contact_data.get("ansprechpartner", "")
+            
+            if ansprechpartner:
+                doc.add_paragraph("IHR ANSPRECHPARTNER").bold = True
+                contact_para = doc.add_paragraph(ansprechpartner)
+                contact_para.paragraph_format.space_after = Pt(5)
+                
+                # Tel und E-Mail
+                telefon = contact_data.get("telefon", "")
+                if telefon:
+                    tel_para = doc.add_paragraph(f"Tel.: {telefon}")
+                    tel_para.paragraph_format.space_after = Pt(5)
+                
+                email = contact_data.get("email", "")
+                if email:
+                    email_para = doc.add_paragraph(f"E-Mail: {email}")
+                    email_para.paragraph_format.space_after = Pt(5)
+            
+            # Wunschgehalt
+            wunschgehalt = profile_data.get("wunschgehalt", "")
+            if wunschgehalt:
+                doc.add_paragraph()  # Leerzeile
+                doc.add_paragraph("INFORMATIONEN ZUR BEWERBUNG").bold = True
+                gehalt_para = doc.add_paragraph(f"Gehaltsvorstellung: {wunschgehalt}")
+                gehalt_para.paragraph_format.space_after = Pt(5)
+                
+                # Verfügbarkeit anzeigen
+                verfuegbarkeit_status = profile_data.get("verfuegbarkeit_status", "")
+                if verfuegbarkeit_status:
+                    verf_para = doc.add_paragraph(f"Verfügbarkeit: {verfuegbarkeit_status}")
+                    verf_para.paragraph_format.space_after = Pt(5)
+                    
+                    # Details zur Verfügbarkeit anzeigen, wenn vorhanden
+                    verfuegbarkeit_details = profile_data.get("verfuegbarkeit_details", "")
+                    if verfuegbarkeit_details:
+                        details_para = doc.add_paragraph(f"Details zur Verfügbarkeit: {verfuegbarkeit_details}")
+                        details_para.paragraph_format.space_after = Pt(5)
+            # Nur Verfügbarkeit anzeigen, wenn kein Wunschgehalt vorhanden ist
+            elif profile_data.get("verfuegbarkeit_status", ""):
+                doc.add_paragraph()  # Leerzeile
+                doc.add_paragraph("INFORMATIONEN ZUR BEWERBUNG").bold = True
+                
+                verfuegbarkeit_status = profile_data.get("verfuegbarkeit_status", "")
+                verf_para = doc.add_paragraph(f"Verfügbarkeit: {verfuegbarkeit_status}")
+                verf_para.paragraph_format.space_after = Pt(5)
+                
+                verfuegbarkeit_details = profile_data.get("verfuegbarkeit_details", "")
+                if verfuegbarkeit_details:
+                    details_para = doc.add_paragraph(f"Details zur Verfügbarkeit: {verfuegbarkeit_details}")
+                    details_para.paragraph_format.space_after = Pt(5)
+            
+            # Speichere das Dokument
+            doc.save(output_path)
+            
+            return output_path
+            
+        except Exception as e:
+            print(f"Fehler bei der DOCX-Generierung: {str(e)}")
             raise
     
     def _create_custom_styles(self):
@@ -324,6 +632,16 @@ class ProfileGenerator:
             wunschgehalt = profile_data.get('wunschgehalt', '')
             if wunschgehalt:
                 elements.append(Paragraph(f"Gehalt: {wunschgehalt}", self.custom_styles['LabelInline']))
+            
+            # Verfügbarkeit (wenn vorhanden)
+            verfuegbarkeit_status = profile_data.get('verfuegbarkeit_status', '')
+            if verfuegbarkeit_status:
+                elements.append(Paragraph(f"Verfügbarkeit: {verfuegbarkeit_status}", self.custom_styles['LabelInline']))
+                
+                # Details zur Verfügbarkeit, wenn vorhanden
+                verfuegbarkeit_details = profile_data.get('verfuegbarkeit_details', '')
+                if verfuegbarkeit_details:
+                    elements.append(Paragraph(f"Details zur Verfügbarkeit: {verfuegbarkeit_details}", self.custom_styles['Normal']))
             
             # Zusätzliche Trennlinie vor dem beruflichen Werdegang
             elements.append(Spacer(1, 0.5*cm))

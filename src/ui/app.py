@@ -883,6 +883,37 @@ if st.session_state.step == 1:
             with col2:
                 edited_data["wunschgehalt"] = st.text_input("Wunschgehalt", value=profile_data.get("wunschgehalt", ""))
             
+            # Verfügbarkeit des Bewerbers
+            st.markdown("### Verfügbarkeit")
+            # Dropdown für Verfügbarkeitsstatus
+            verfuegbarkeit_optionen = [
+                "Sofort verfügbar",
+                "Kündigungsfrist 1 Monat",
+                "Kündigungsfrist 2 Monate",
+                "Kündigungsfrist 3 Monate",
+                "Derzeit nicht verfügbar",
+                "Verfügbar mit Einschränkungen"
+            ]
+            
+            verfuegbarkeit_status = st.selectbox(
+                "Verfügbarkeitsstatus",
+                options=verfuegbarkeit_optionen,
+                index=0,
+                key="verfuegbarkeit_status"
+            )
+            
+            # Zusätzliche Details zur Verfügbarkeit
+            verfuegbarkeit_details = st.text_area(
+                "Details zur Verfügbarkeit (optional)",
+                value=profile_data.get("verfuegbarkeit_details", ""),
+                help="Z.B. gesundheitliche Einschränkungen, spezielle Umstände, genaues Datum der Verfügbarkeit",
+                key="verfuegbarkeit_details"
+            )
+            
+            # Verfügbarkeitsdaten speichern
+            edited_data["verfuegbarkeit_status"] = verfuegbarkeit_status
+            edited_data["verfuegbarkeit_details"] = verfuegbarkeit_details
+
             # Kontaktinformationen
             st.markdown("### Kontaktinformationen")
             kontakt = personal_data.get("kontakt", {})
@@ -1074,7 +1105,9 @@ if st.session_state.step == 1:
                 "berufserfahrung": edited_experience,
                 "ausbildung": edited_education,
                 "weiterbildungen": edited_training,
-                "wunschgehalt": edited_data.get("wunschgehalt", "")
+                "wunschgehalt": edited_data.get("wunschgehalt", ""),
+                "verfuegbarkeit_status": edited_data.get("verfuegbarkeit_status", "Sofort verfügbar"),
+                "verfuegbarkeit_details": edited_data.get("verfuegbarkeit_details", "")
             }
             
             # Speichern der bearbeiteten Daten in der Session
@@ -1167,19 +1200,59 @@ if st.session_state.step == 1:
                 pdf_display = display_pdf(st.session_state.preview_pdf)
                 st.markdown(pdf_display, unsafe_allow_html=True)
                 
-                # Download-Button für die PDF-Datei
+                # Name für das Profil
                 name = edited_data_to_use["persönliche_daten"]["name"].replace(" ", "_")
                 if not name or name == "":
                     name = "Profil"
                 
-                with open(st.session_state.preview_pdf, "rb") as file:
-                    st.download_button(
-                        label="Profil herunterladen",
-                        data=file,
-                        file_name=f"{name}_Profil.pdf",
-                        mime="application/pdf",
-                        key="download_demo"
-                    )
+                # Auswahl des Formats mit RadioButtons
+                st.markdown("#### Format wählen")
+                format_option = st.radio(
+                    "In welchem Format möchten Sie das Profil herunterladen?",
+                    options=["PDF", "Word"],
+                    horizontal=True,
+                    key="format_choice_demo"
+                )
+                
+                # Je nach Auswahl unterschiedlichen Download-Button anzeigen
+                if format_option == "PDF":
+                    # PDF-Download
+                    with open(st.session_state.preview_pdf, "rb") as file:
+                        st.download_button(
+                            label="Profil herunterladen",
+                            data=file,
+                            file_name=f"{name}_Profil.pdf",
+                            mime="application/pdf",
+                            key="download_pdf_demo"
+                        )
+                else:
+                    # Word-Dokument generieren und herunterladen
+                    # Temporäre Datei für das Word-Dokument erstellen
+                    output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".docx")
+                    output_path = output_file.name
+                    output_file.close()
+                    st.session_state.temp_files.append(output_path)
+                    
+                    try:
+                        # Word-Dokument mit dem gleichen Generator erstellen
+                        docx_path = generator.generate_profile(
+                            edited_data_to_use, 
+                            output_path, 
+                            template=template_to_use,
+                            format="docx"
+                        )
+                        
+                        # Word-Dokument zum Download anbieten
+                        with open(docx_path, "rb") as file:
+                            st.download_button(
+                                label="Profil herunterladen",
+                                data=file,
+                                file_name=f"{name}_Profil.docx",
+                                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                key="download_word_demo"
+                            )
+                    except Exception as e:
+                        st.error(f"Fehler bei der Word-Dokument-Generierung: {str(e)}")
     else:
         # Normaler Modus - Standardmäßig wird der "Standard (Extraktion → Analyse)"-Modus verwendet
         processing_mode = "Standard (Extraktion → Analyse)"
@@ -1312,6 +1385,37 @@ if st.session_state.step == 1:
                         with col2:
                             edited_data["wunschgehalt"] = st.text_input("Wunschgehalt", value=profile_data.get("wunschgehalt", ""))
                         
+                        # Verfügbarkeit des Bewerbers
+                        st.markdown("### Verfügbarkeit")
+                        # Dropdown für Verfügbarkeitsstatus
+                        verfuegbarkeit_optionen = [
+                            "Sofort verfügbar",
+                            "Kündigungsfrist 1 Monat",
+                            "Kündigungsfrist 2 Monate",
+                            "Kündigungsfrist 3 Monate",
+                            "Derzeit nicht verfügbar",
+                            "Verfügbar mit Einschränkungen"
+                        ]
+                        
+                        verfuegbarkeit_status = st.selectbox(
+                            "Verfügbarkeitsstatus",
+                            options=verfuegbarkeit_optionen,
+                            index=0,
+                            key="verfuegbarkeit_status"
+                        )
+                        
+                        # Zusätzliche Details zur Verfügbarkeit
+                        verfuegbarkeit_details = st.text_area(
+                            "Details zur Verfügbarkeit (optional)",
+                            value=profile_data.get("verfuegbarkeit_details", ""),
+                            help="Z.B. gesundheitliche Einschränkungen, spezielle Umstände, genaues Datum der Verfügbarkeit",
+                            key="verfuegbarkeit_details"
+                        )
+                        
+                        # Verfügbarkeitsdaten speichern
+                        edited_data["verfuegbarkeit_status"] = verfuegbarkeit_status
+                        edited_data["verfuegbarkeit_details"] = verfuegbarkeit_details
+
                         # Kontaktinformationen
                         st.markdown("### Kontaktinformationen")
                         kontakt = personal_data.get("kontakt", {})
@@ -1501,7 +1605,9 @@ if st.session_state.step == 1:
                             "berufserfahrung": edited_experience,
                             "ausbildung": edited_education,
                             "weiterbildungen": edited_training,
-                            "wunschgehalt": edited_data.get("wunschgehalt", "")
+                            "wunschgehalt": edited_data.get("wunschgehalt", ""),
+                            "verfuegbarkeit_status": edited_data.get("verfuegbarkeit_status", "Sofort verfügbar"),
+                            "verfuegbarkeit_details": edited_data.get("verfuegbarkeit_details", "")
                         }
                         
                         # Speichern der bearbeiteten Daten in der Session
@@ -1590,18 +1696,62 @@ if st.session_state.step == 1:
                             pdf_display = display_pdf(st.session_state.preview_pdf)
                             st.markdown(pdf_display, unsafe_allow_html=True)
                             
-                            # Download-Button für die PDF-Datei
+                            # Name für das Profil
                             name = edited_data_to_use["persönliche_daten"]["name"].replace(" ", "_")
                             if not name or name == "":
                                 name = "Profil"
                             
-                            with open(st.session_state.preview_pdf, "rb") as file:
-                                st.download_button(
-                                    label="Profil herunterladen",
-                                    data=file,
-                                    file_name=f"{name}_Profil.pdf",
-                                    mime="application/pdf"
-                                )
+                            # Auswahl des Formats mit RadioButtons
+                            st.markdown("#### Format wählen")
+                            format_option = st.radio(
+                                "In welchem Format möchten Sie das Profil herunterladen?",
+                                options=["PDF", "Word"],
+                                horizontal=True,
+                                key="format_choice"
+                            )
+                            
+                            # Je nach Auswahl unterschiedlichen Download-Button anzeigen
+                            if format_option == "PDF":
+                                # PDF-Download
+                                with open(st.session_state.preview_pdf, "rb") as file:
+                                    st.download_button(
+                                        label="Profil herunterladen",
+                                        data=file,
+                                        file_name=f"{name}_Profil.pdf",
+                                        mime="application/pdf",
+                                        key="download_pdf"
+                                    )
+                            else:
+                                # Word-Dokument generieren und herunterladen
+                                # Temporäre Datei für das Word-Dokument erstellen
+                                output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".docx")
+                                output_path = output_file.name
+                                output_file.close()
+                                st.session_state.temp_files.append(output_path)
+                                
+                                try:
+                                    # Stelle sicher, dass generator definiert ist
+                                    generator = ProfileGenerator()
+                                    
+                                    # Word-Dokument mit dem gleichen Generator erstellen
+                                    docx_path = generator.generate_profile(
+                                        edited_data_to_use, 
+                                        output_path, 
+                                        template=template_to_use,
+                                        format="docx"
+                                    )
+                                    
+                                    # Word-Dokument zum Download anbieten
+                                    with open(docx_path, "rb") as file:
+                                        st.download_button(
+                                            label="Profil herunterladen",
+                                            data=file,
+                                            file_name=f"{name}_Profil.docx",
+                                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                            key="download_word"
+                                        )
+                                except Exception as e:
+                                    st.error(f"Fehler bei der Word-Dokument-Generierung: {str(e)}")
                 
                 except Exception as e:
                     st.error(f"Fehler bei der Verarbeitung: {str(e)}")
