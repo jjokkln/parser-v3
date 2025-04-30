@@ -21,17 +21,6 @@ from src.core.combined_processor import CombinedProcessor
 from src.templates.template_generator import ProfileGenerator
 import src.utils.config as config  # Importiere das Konfigurationsmodul
 
-# Hinweis: Diese Anwendung unterstützt jetzt Multipage-Funktionalität
-# Zusätzliche Seiten wie die Einstellungsseite befinden sich im pages/ Verzeichnis im Root-Ordner
-# und werden automatisch als Navigationsoptionen angezeigt
-
-# Seitenkonfiguration
-st.set_page_config(
-    page_title="CV2Profile",
-    page_icon="📄",
-    layout="wide"
-)
-
 # CSS für Farbverlaufshintergrund und weiße Schaltflächen
 custom_css = """
 <style>
@@ -721,6 +710,16 @@ st.markdown("""
 # Sidebar für Einstellungen
 with st.sidebar:
     st.header("Einstellungen")
+    
+    # Link zur Einstellungsseite
+    st.markdown("""
+    <a href="/01_Settings" target="_self" style="text-decoration: none;">
+        <div style="background: rgba(255, 255, 255, 0.15); padding: 10px 15px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); border: 1px solid rgba(255, 255, 255, 0.1);">
+            <span style="font-size: 24px; margin-right: 10px;">⚙️</span>
+            <span style="color: white; font-weight: 500;">Einstellungen öffnen</span>
+        </div>
+    </a>
+    """, unsafe_allow_html=True)
     
     # Demo-Modus Schalter
     demo_mode = st.toggle("Demo-Modus", value=st.session_state.demo_mode, 

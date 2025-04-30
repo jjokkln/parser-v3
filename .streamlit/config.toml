@@ -1,16 +1,19 @@
 [theme]
-primaryColor = "#7B1FA2"
-backgroundColor = "#4527A0"
-secondaryBackgroundColor = "rgba(255, 255, 255, 0.1)"
-textColor = "#FFFFFF"
+primaryColor = "#4A6EE0"
+backgroundColor = "#0E1117"
+secondaryBackgroundColor = "#262730"
+textColor = "#FAFAFA"
 font = "sans serif"
-
-[browser]
-gatherUsageStats = false
 
 [server]
 enableCORS = false
 enableXsrfProtection = false
-runOnSave = true
 
-# Hier können weitere Streamlit-Konfigurationen hinzugefügt werden 
+[browser]
+gatherUsageStats = false
+
+[ui]
+hideTopBar = false
+
+[pages]
+01_Settings = "⚙️ Einstellungen" 
