@@ -3,6 +3,7 @@
 CV2Profile - Haupteinstiegspunkt
 
 Dieses Skript startet die CV2Profile-Anwendung.
+Die Anwendung unterstützt jetzt Multipage mit der Hauptseite und Einstellungsseite.
 """
 
 import os
@@ -18,6 +19,7 @@ def main():
     
     try:
         # Streamlit mit der UI-App starten
+        # Die Hauptseite ist src/ui/app.py, zusätzliche Seiten werden aus dem pages/ Ordner geladen
         subprocess.run(["streamlit", "run", "src/ui/app.py"], check=True)
     except KeyboardInterrupt:
         print("\nAnwendung wurde beendet.")
