@@ -13,6 +13,91 @@ Diese Anwendung ist ein leistungsstarker CV-Parser, der Lebensläufe automatisch
 - **Benutzerfreundliche Oberfläche**: Einfache Handhabung durch Streamlit-Frontend
 - **Benutzerverwaltete Einstellungen**: Speichern von Voreinstellungen wie API-Keys und bevorzugten Templates
 
+## Detaillierte Projektstruktur
+
+```
+CV2Profile/
+│
+├── src/                           # Quellcode-Verzeichnis
+│   ├── core/                      # Kernfunktionalität für Dokumentenverarbeitung
+│   │   ├── __init__.py           # Package-Initialisierung
+│   │   ├── document_processor.py  # Dokumentenverarbeitung (PDF, DOCX, Bilder)
+│   │   ├── ai_extractor.py       # KI-gestützte Informationsextraktion (OpenAI)
+│   │   └── combined_processor.py # Kombinierte Verarbeitungslogik
+│   │
+│   ├── ui/                        # Benutzeroberflächen-Module
+│   │   ├── __init__.py           # Package-Initialisierung
+│   │   ├── app.py                # Hauptanwendung (Streamlit-Oberfläche)
+│   │   ├── Home.py               # Homepage der Anwendung
+│   │   └── pages/                # Zusätzliche Seiten
+│   │       ├── README.md         # Dokumentation zu Seiten
+│   │       └── 01_⚙️_Einstellungen.py  # Einstellungen-Seite
+│   │
+│   ├── utils/                     # Hilfsfunktionen
+│   │   ├── __init__.py           # Package-Initialisierung
+│   │   └── config.py             # Konfigurationsmanagement (API-Keys, etc.)
+│   │
+│   ├── templates/                 # Template-Generierung
+│   │   ├── __init__.py           # Package-Initialisierung
+│   │   └── template_generator.py # PDF-Profilgenerierung
+│   │
+│   └── __init__.py               # Hauptpackage-Initialisierung
+│
+├── sources/                       # Ressourcen und Assets
+│   ├── galdoralogo.png           # Firmenlogo für PDF-Dokumente
+│   ├── cv2profile-loho.png       # Anwendungslogo
+│   ├── Profilvorlage Seite 1.png # Designvorlagen
+│   └── Profilvorlage Seite 2.png # Designvorlagen
+│
+├── context/                       # Projektdokumentation und -kontext
+│   ├── Context.md                # Hauptdokumentation (diese Datei)
+│   ├── README.md                 # Zusätzliche Dokumentation
+│   ├── progress.md               # Fortschrittsverfolgung und Aufgabenplanung
+│   ├── activecontext.md          # Aktiver Arbeitskontext
+│   ├── globalsummary.md          # Globale Zusammenfassung
+│   └── summary*.md               # Versionsbasierte Zusammenfassungen
+│
+├── .streamlit/                    # Streamlit-Konfiguration
+│   ├── config.toml               # UI-Einstellungen
+│   ├── secrets.toml              # Anwendungsgeheimnisse (API-Keys etc.)
+│   └── secrets_template.toml     # Vorlage für secrets.toml
+│
+├── venv/ und .venv/              # Virtuelle Umgebungen
+│
+└── Hauptdateien
+    ├── main.py                   # Einstiegspunkt der Anwendung
+    ├── run.sh                    # Skript zum Starten der Anwendung
+    ├── requirements.txt          # Projektabhängigkeiten
+    ├── packages.txt              # Systemabhängigkeiten
+    ├── README.md                 # Projektübersicht
+    ├── archive_notice.py         # Archivierungshinweis
+    └── LICENSE                   # Lizenzinformationen
+```
+
+## Dateipfade für häufige Änderungen
+
+### Benutzeroberfläche anpassen
+- **Hauptanwendung**: `src/ui/app.py` - Enthält die gesamte Streamlit-Hauptoberfläche
+- **Homepage**: `src/ui/Home.py` - Startseite der Anwendung
+- **Einstellungen**: `src/ui/pages/01_⚙️_Einstellungen.py` - Einstellungsseite
+
+### KI-Funktionalität anpassen
+- **Extraktor**: `src/core/ai_extractor.py` - OpenAI-Integration und Datenextraktion
+- **Prompts ändern**: `src/core/ai_extractor.py` - Enthält die Prompt-Templates für OpenAI
+
+### PDF-Vorlagen anpassen
+- **Template-Generator**: `src/templates/template_generator.py` - PDF-Generierung und Design
+- **Logos und Bilder**: `sources/` - Bilder und Logos für die PDF-Vorlagen
+
+### Konfiguration anpassen
+- **Konfigurationsmanagement**: `src/utils/config.py` - Verwaltet Benutzereinstellungen
+- **Streamlit-Konfiguration**: `.streamlit/config.toml` - Ändert Streamlit-Verhalten
+- **Geheime Schlüssel**: `.streamlit/secrets.toml` - Für API-Keys und Geheimnisse
+
+### Dokument-Verarbeitung anpassen
+- **Dokumentenprozessor**: `src/core/document_processor.py` - Text aus verschiedenen Formaten extrahieren
+- **Kombinierter Prozessor**: `src/core/combined_processor.py` - Hauptworkflow der Anwendung
+
 ## Technische Komponenten
 
 Die Anwendung besteht aus mehreren Modulen:

@@ -16,4 +16,4 @@ gatherUsageStats = false
 hideTopBar = false
 
 [pages]
-01_Settings = "⚙️ Einstellungen" 
+01_⚙️_Einstellungen = "⚙️ Einstellungen" 

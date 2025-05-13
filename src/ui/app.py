@@ -10,6 +10,7 @@ import pandas as pd
 import re
 from pathlib import Path
 from datetime import datetime
+import atexit
 
 # Füge den übergeordneten Ordner zum Pythonpfad hinzu, um relative Importe zu ermöglichen
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
@@ -20,6 +21,30 @@ from src.core.ai_extractor import AIExtractor
 from src.core.combined_processor import CombinedProcessor
 from src.templates.template_generator import ProfileGenerator
 import src.utils.config as config  # Importiere das Konfigurationsmodul
+
+# Function to load and convert the logo to base64
+def get_logo_as_base64():
+    """Load and convert the logo to base64 for embedding in HTML"""
+    try:
+        # Try to find the logo in the sources directory
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        sources_dir = os.path.join(os.path.dirname(os.path.dirname(current_dir)), 'sources')
+        logo_path = os.path.join(sources_dir, 'cv2profile-loho.png')
+        
+        # Fallback locations if the first path doesn't exist
+        if not os.path.exists(logo_path):
+            logo_path = os.path.join(sources_dir, 'Galdoralogo.png')
+        
+        if not os.path.exists(logo_path):
+            # Final fallback: return an empty string if no logo is found
+            return ""
+        
+        with open(logo_path, "rb") as f:
+            logo_data = f.read()
+            return base64.b64encode(logo_data).decode("utf-8")
+    except Exception as e:
+        print(f"Error loading logo: {e}")
+        return ""
 
 # CSS für Farbverlaufshintergrund und weiße Schaltflächen
 custom_css = """
@@ -702,10 +727,13 @@ st.markdown(custom_css, unsafe_allow_html=True)
 # Header-Bereich mit verbessertem Glasmorphismus-Effekt
 st.markdown("""
 <div style="background-color: rgba(255, 255, 255, 0.15); padding: 2.5rem; border-radius: 15px; margin-bottom: 2rem; color: white; text-align: center; backdrop-filter: blur(12px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.18);">
-    <h1 style="margin: 0; font-weight: 700; font-size: 2.8rem; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);">CV2Profile Konverter</h1>
-    <p style="margin-top: 1rem; font-size: 1.2rem; opacity: 0.95;">Konvertiere deinen Lebenslauf in ein professionelles Profil. Lade deine Datei hoch, wähle die gewünschten Informationen aus und gestalte dein Profil.</p>
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+        <img src="data:image/png;base64,{}" alt="CV2Profile Logo" style="max-width: 200px; margin-bottom: 1.5rem;">
+        <h1 style="margin: 0; font-weight: 700; font-size: 2.8rem; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);">CV2Profile Konverter</h1>
+        <p style="margin-top: 1rem; font-size: 1.2rem; opacity: 0.95;">Konvertiere deinen Lebenslauf in ein professionelles Profil. Lade deine Datei hoch, wähle die gewünschten Informationen aus und gestalte dein Profil.</p>
+    </div>
 </div>
-""", unsafe_allow_html=True)
+""".format(get_logo_as_base64()), unsafe_allow_html=True)
 
 # Sidebar für Einstellungen
 with st.sidebar:
@@ -713,7 +741,7 @@ with st.sidebar:
     
     # Link zur Einstellungsseite
     st.markdown("""
-    <a href="/01_Settings" target="_self" style="text-decoration: none;">
+    <a href="/01_⚙️_Einstellungen" target="_self" style="text-decoration: none;">
         <div style="background: rgba(255, 255, 255, 0.15); padding: 10px 15px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); border: 1px solid rgba(255, 255, 255, 0.1);">
             <span style="font-size: 24px; margin-right: 10px;">⚙️</span>
             <span style="color: white; font-weight: 500;">Einstellungen öffnen</span>
@@ -1275,6 +1303,26 @@ if st.session_state.step == 1:
                 type=["pdf", "jpg", "jpeg", "png", "docx"]
             )
         
+        # Wenn eine Datei hochgeladen wurde, zeige den Dateinamen kleiner und zentriert an
+        if uploaded_file:
+            st.markdown(f"""
+            <div style="display: flex; justify-content: center; margin-top: 10px;">
+                <div style="background: rgba(255, 255, 255, 0.15); border-radius: 8px; padding: 8px 16px; 
+                     backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); 
+                     border: 1px solid rgba(255, 255, 255, 0.1); max-width: 80%; text-align: center;">
+                    <div style="display: flex; align-items: center; justify-content: center;">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="white" style="margin-right: 8px;">
+                            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                        </svg>
+                        <span style="color: white; font-size: 0.9rem;">{uploaded_file.name}</span>
+                    </div>
+                    <div style="font-size: 0.7rem; color: rgba(255,255,255,0.7); margin-top: 4px;">
+                        {round(len(uploaded_file.getvalue())/1024, 1)} KB
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
         # Im normalen Modus prüfen wir, ob File und API Key vorhanden sind
         if uploaded_file and openai_api_key:
             # Datei speichern und verarbeiten
@@ -1808,5 +1856,4 @@ def cleanup():
         print("Cleanup abgeschlossen.")
 
 # Cleanup-Funktion registrieren
-import atexit
 atexit.register(cleanup)
