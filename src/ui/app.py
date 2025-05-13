@@ -21,19 +21,22 @@ from src.core.ai_extractor import AIExtractor
 from src.core.combined_processor import CombinedProcessor
 from src.templates.template_generator import ProfileGenerator
 import src.utils.config as config  # Importiere das Konfigurationsmodul
+from src.utils.image_utils import get_image_path, ensure_images_in_static  # Importiere die Bild-Utilities
 
 # Function to load and convert the logo to base64
 def get_logo_as_base64():
     """Load and convert the logo to base64 for embedding in HTML"""
     try:
-        # Try to find the logo in the sources directory
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        sources_dir = os.path.join(os.path.dirname(os.path.dirname(current_dir)), 'sources')
-        logo_path = os.path.join(sources_dir, 'cv2profile-loho.png')
+        # Make sure all images are available in the static directory for HTTPS compatibility
+        ensure_images_in_static()
+        
+        # Try to find the logo using our image utility
+        # For HTTPS compatibility, use_static=True
+        logo_path = get_image_path('cv2profile-loho.png', use_static=True)
         
         # Fallback locations if the first path doesn't exist
         if not os.path.exists(logo_path):
-            logo_path = os.path.join(sources_dir, 'Galdoralogo.png')
+            logo_path = get_image_path('Galdoralogo.png', use_static=True)
         
         if not os.path.exists(logo_path):
             # Final fallback: return an empty string if no logo is found
@@ -721,6 +724,9 @@ def display_pdf(file_path):
 # Seitentitel und Konfiguration
 st.set_page_config(page_title="CV2Profile Konverter", layout="wide")
 
+# Stelle sicher, dass alle Bilder im static-Verzeichnis verfügbar sind für HTTPS-Kompatibilität
+ensure_images_in_static()
+
 # CSS einbinden
 st.markdown(custom_css, unsafe_allow_html=True)
 
@@ -741,7 +747,7 @@ with st.sidebar:
     
     # Link zur Einstellungsseite
     st.markdown("""
-    <a href="/01_⚙️_Einstellungen" target="_self" style="text-decoration: none;">
+    <a href="/01_Settings" target="_self" style="text-decoration: none;">
         <div style="background: rgba(255, 255, 255, 0.15); padding: 10px 15px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); border: 1px solid rgba(255, 255, 255, 0.1);">
             <span style="font-size: 24px; margin-right: 10px;">⚙️</span>
             <span style="color: white; font-weight: 500;">Einstellungen öffnen</span>
@@ -908,18 +914,43 @@ if st.session_state.step == 1:
             # Name und Grunddaten
             col1, col2, col3 = st.columns(3)
             with col1:
-                edited_data["name"] = st.text_input("Name", value=personal_data.get("name", ""))
+                edited_data["name"] = st.text_input("Name", value=personal_data.get("name", ""), key="name_input_normal")
             with col2:
-                edited_data["wohnort"] = st.text_input("Wohnort", value=personal_data.get("wohnort", ""))
+                edited_data["wohnort"] = st.text_input("Wohnort", value=personal_data.get("wohnort", ""), key="wohnort_input_normal")
             with col3:
-                edited_data["jahrgang"] = st.text_input("Jahrgang", value=personal_data.get("jahrgang", ""))
+                edited_data["jahrgang"] = st.text_input("Jahrgang", value=personal_data.get("jahrgang", ""), key="jahrgang_input_normal")
+            
+            # Profilbild-Upload hinzufügen
+            st.markdown("### Profilbild")
+            st.markdown("Laden Sie optional ein Profilbild hoch (JPG, PNG):")
+            
+            # Profilbild-Upload
+            profile_image = st.file_uploader("Profilbild hochladen", 
+                                             type=["jpg", "jpeg", "png"], 
+                                             key="profile_image_uploader_normal")
+            
+            # Bild anzeigen und in Session speichern, wenn hochgeladen
+            if profile_image is not None:
+                # Bild anzeigen
+                st.image(profile_image, width=150, caption="Vorschau des Profilbilds")
+                
+                # Bild in Session speichern
+                if 'profile_image' not in st.session_state or st.session_state.profile_image != profile_image:
+                    # Temporäre Datei für das Bild erstellen
+                    img_extension = os.path.splitext(profile_image.name)[1].lower()
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=img_extension) as tmp_file:
+                        tmp_file.write(profile_image.getbuffer())
+                        img_path = tmp_file.name
+                        st.session_state.profile_image_path = img_path
+                        st.session_state.temp_files.append(img_path)
+                        st.session_state.profile_image = profile_image
             
             # Führerschein und Wunschgehalt
             col1, col2 = st.columns(2)
             with col1:
-                edited_data["führerschein"] = st.text_input("Führerschein", value=personal_data.get("führerschein", ""))
+                edited_data["führerschein"] = st.text_input("Führerschein", value=personal_data.get("führerschein", ""), key="fuehrerschein_input_normal")
             with col2:
-                edited_data["wunschgehalt"] = st.text_input("Wunschgehalt", value=profile_data.get("wunschgehalt", ""))
+                edited_data["wunschgehalt"] = st.text_input("Wunschgehalt", value=profile_data.get("wunschgehalt", ""), key="gehalt_input_normal")
             
             # Verfügbarkeit des Bewerbers
             st.markdown("### Verfügbarkeit")
@@ -1127,19 +1158,20 @@ if st.session_state.step == 1:
                     if st.button("Weiterbildung hinzufügen", key="save_weiter_demo"):
                         edited_training.append(new_training)
 
-            # Zusammenführen der bearbeiteten Daten
-            complete_edited_data = {
-                "persönliche_daten": {
-                    "name": edited_data.get("name", ""),
-                    "wohnort": edited_data.get("wohnort", ""),
-                    "jahrgang": edited_data.get("jahrgang", ""),
-                    "führerschein": edited_data.get("führerschein", ""),
-                    "kontakt": {
-                        "ansprechpartner": edited_data.get("ansprechpartner", ""),
-                        "telefon": edited_data.get("telefon", ""),
-                        "email": edited_data.get("email", "")
-                    }
-                },
+                                    # Zusammenführen der bearbeiteten Daten
+                        complete_edited_data = {
+                            "persönliche_daten": {
+                                "name": edited_data.get("name", ""),
+                                "wohnort": edited_data.get("wohnort", ""),
+                                "jahrgang": edited_data.get("jahrgang", ""),
+                                "führerschein": edited_data.get("führerschein", ""),
+                                "kontakt": {
+                                    "ansprechpartner": edited_data.get("ansprechpartner", ""),
+                                    "telefon": edited_data.get("telefon", ""),
+                                    "email": edited_data.get("email", "")
+                                },
+                                "profile_image": st.session_state.get("profile_image_path", None)
+                            },
                 "berufserfahrung": edited_experience,
                 "ausbildung": edited_education,
                 "weiterbildungen": edited_training,
@@ -1188,6 +1220,8 @@ if st.session_state.step == 1:
                                     key="classic_demo")
                 if classic:
                     template_to_use = "classic"
+                    # Automatisch Vorschau aktualisieren, wenn Template geändert wird
+                    st.session_state.update_preview = True
                     
             with col2:
                 modern = st.button("🟢 🟢\nModern", 
@@ -1196,6 +1230,8 @@ if st.session_state.step == 1:
                                 key="modern_demo")
                 if modern:
                     template_to_use = "modern"
+                    # Automatisch Vorschau aktualisieren, wenn Template geändert wird
+                    st.session_state.update_preview = True
                     
             with col3:
                 professional = st.button("🟣 🟣\nProfessionell", 
@@ -1204,6 +1240,8 @@ if st.session_state.step == 1:
                                     key="professional_demo")
                 if professional:
                     template_to_use = "professional"
+                    # Automatisch Vorschau aktualisieren, wenn Template geändert wird
+                    st.session_state.update_preview = True
                     
             with col4:
                 minimalistic = st.button("⚫ ⚫\nMinimalistisch", 
@@ -1212,9 +1250,13 @@ if st.session_state.step == 1:
                                     key="minimalistic_demo")
                 if minimalistic:
                     template_to_use = "minimalist"
+                    # Automatisch Vorschau aktualisieren, wenn Template geändert wird
+                    st.session_state.update_preview = True
             
-            # Profil-Vorschau generieren und anzeigen
-            if 'preview_pdf' not in st.session_state or st.button("Vorschau aktualisieren", key="update_preview_demo"):
+                        # Profil-Vorschau generieren und anzeigen
+            if 'preview_pdf' not in st.session_state or st.button("Vorschau aktualisieren", key="update_preview_demo") or st.session_state.get('update_preview', False):
+                # Reset des Update-Flags
+                st.session_state.update_preview = False
                 with st.spinner("Profil wird generiert..."):
                     try:
                         generator = ProfileGenerator()
@@ -1229,6 +1271,9 @@ if st.session_state.step == 1:
                         
                         # Zeige eine Erfolgsmeldung an
                         st.success("Profil erfolgreich generiert!")
+                        
+                        # Speichere das ausgewählte Template für zukünftige Aktualisierungen
+                        st.session_state.selected_template = template_to_use
                     except Exception as e:
                         st.error(f"Fehler bei der Generierung des Profils: {str(e)}")
             
@@ -1255,14 +1300,17 @@ if st.session_state.step == 1:
                 # Je nach Auswahl unterschiedlichen Download-Button anzeigen
                 if format_option == "PDF":
                     # PDF-Download
-                    with open(st.session_state.preview_pdf, "rb") as file:
-                        st.download_button(
-                            label="Profil herunterladen",
-                            data=file,
-                            file_name=f"{name}_Profil.pdf",
-                            mime="application/pdf",
-                            key="download_pdf_demo"
-                        )
+                    if st.session_state.preview_pdf and os.path.exists(st.session_state.preview_pdf):
+                        with open(st.session_state.preview_pdf, "rb") as file:
+                            st.download_button(
+                                label="Profil herunterladen",
+                                data=file,
+                                file_name=f"{name}_Profil.pdf",
+                                mime="application/pdf",
+                                key="download_pdf_demo"
+                            )
+                    else:
+                        st.error("Bitte generieren Sie zuerst eine Vorschau des Profils.")
                 else:
                     # Word-Dokument generieren und herunterladen
                     # Temporäre Datei für das Word-Dokument erstellen
@@ -1435,6 +1483,31 @@ if st.session_state.step == 1:
                             edited_data["wohnort"] = st.text_input("Wohnort", value=personal_data.get("wohnort", ""))
                         with col3:
                             edited_data["jahrgang"] = st.text_input("Jahrgang", value=personal_data.get("jahrgang", ""))
+                        
+                        # Profilbild-Upload hinzufügen
+                        st.markdown("### Profilbild")
+                        st.markdown("Laden Sie optional ein Profilbild hoch (JPG, PNG):")
+                        
+                        # Profilbild-Upload
+                        profile_image = st.file_uploader("Profilbild hochladen", 
+                                                         type=["jpg", "jpeg", "png"], 
+                                                         key="profile_image_uploader")
+                        
+                        # Bild anzeigen und in Session speichern, wenn hochgeladen
+                        if profile_image is not None:
+                            # Bild anzeigen
+                            st.image(profile_image, width=150, caption="Vorschau des Profilbilds")
+                            
+                            # Bild in Session speichern
+                            if 'profile_image' not in st.session_state or st.session_state.profile_image != profile_image:
+                                # Temporäre Datei für das Bild erstellen
+                                img_extension = os.path.splitext(profile_image.name)[1].lower()
+                                with tempfile.NamedTemporaryFile(delete=False, suffix=img_extension) as tmp_file:
+                                    tmp_file.write(profile_image.getbuffer())
+                                    img_path = tmp_file.name
+                                    st.session_state.profile_image_path = img_path
+                                    st.session_state.temp_files.append(img_path)
+                                    st.session_state.profile_image = profile_image
                         
                         # Führerschein und Wunschgehalt
                         col1, col2 = st.columns(2)
@@ -1658,7 +1731,8 @@ if st.session_state.step == 1:
                                     "ansprechpartner": edited_data.get("ansprechpartner", ""),
                                     "telefon": edited_data.get("telefon", ""),
                                     "email": edited_data.get("email", "")
-                                }
+                                },
+                                "profile_image": st.session_state.get("profile_image_path", None)
                             },
                             "berufserfahrung": edited_experience,
                             "ausbildung": edited_education,
@@ -1707,6 +1781,8 @@ if st.session_state.step == 1:
                                                 type="primary" if default_template == "classic" else "secondary")
                             if classic:
                                 template_to_use = "classic"
+                                # Automatisch Vorschau aktualisieren, wenn Template geändert wird
+                                st.session_state.update_preview = True
                                 
                         with col2:
                             modern = st.button("🟢 🟢\nModern", 
@@ -1714,6 +1790,8 @@ if st.session_state.step == 1:
                                             type="primary" if default_template == "modern" else "secondary")
                             if modern:
                                 template_to_use = "modern"
+                                # Automatisch Vorschau aktualisieren, wenn Template geändert wird
+                                st.session_state.update_preview = True
                                 
                         with col3:
                             professional = st.button("🟣 🟣\nProfessionell", 
@@ -1721,6 +1799,8 @@ if st.session_state.step == 1:
                                                 type="primary" if default_template == "professional" else "secondary")
                             if professional:
                                 template_to_use = "professional"
+                                # Automatisch Vorschau aktualisieren, wenn Template geändert wird
+                                st.session_state.update_preview = True
                                 
                         with col4:
                             minimalistic = st.button("⚫ ⚫\nMinimalistisch", 
@@ -1728,9 +1808,13 @@ if st.session_state.step == 1:
                                                 type="primary" if default_template == "minimalist" else "secondary")
                             if minimalistic:
                                 template_to_use = "minimalist"
+                                # Automatisch Vorschau aktualisieren, wenn Template geändert wird
+                                st.session_state.update_preview = True
                                 
                         # Profil-Vorschau generieren und anzeigen
-                        if 'preview_pdf' not in st.session_state or st.button("Vorschau aktualisieren"):
+                        if 'preview_pdf' not in st.session_state or st.button("Vorschau aktualisieren") or st.session_state.get('update_preview', False):
+                            # Reset des Update-Flags
+                            st.session_state.update_preview = False
                             with st.spinner("Profil wird generiert..."):
                                 try:
                                     generator = ProfileGenerator()
@@ -1745,6 +1829,9 @@ if st.session_state.step == 1:
                                     
                                     # Zeige eine Erfolgsmeldung an
                                     st.success("Profil erfolgreich generiert!")
+                                    
+                                    # Speichere das ausgewählte Template für zukünftige Aktualisierungen
+                                    st.session_state.selected_template = template_to_use
                                 except Exception as e:
                                     st.error(f"Fehler bei der Generierung des Profils: {str(e)}")
                         
@@ -1771,14 +1858,17 @@ if st.session_state.step == 1:
                             # Je nach Auswahl unterschiedlichen Download-Button anzeigen
                             if format_option == "PDF":
                                 # PDF-Download
-                                with open(st.session_state.preview_pdf, "rb") as file:
-                                    st.download_button(
-                                        label="Profil herunterladen",
-                                        data=file,
-                                        file_name=f"{name}_Profil.pdf",
-                                        mime="application/pdf",
-                                        key="download_pdf"
-                                    )
+                                if st.session_state.preview_pdf and os.path.exists(st.session_state.preview_pdf):
+                                    with open(st.session_state.preview_pdf, "rb") as file:
+                                        st.download_button(
+                                            label="Profil herunterladen",
+                                            data=file,
+                                            file_name=f"{name}_Profil.pdf",
+                                            mime="application/pdf",
+                                            key="download_pdf"
+                                        )
+                                else:
+                                    st.error("Bitte generieren Sie zuerst eine Vorschau des Profils.")
                             else:
                                 # Word-Dokument generieren und herunterladen
                                 # Temporäre Datei für das Word-Dokument erstellen

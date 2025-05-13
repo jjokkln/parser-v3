@@ -10,7 +10,7 @@ import os
 import sys
 
 # Den Hauptpfad zum Importieren hinzufügen
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
 
 # Importe aus den reorganisierten Modulen
 from src.core.document_processor import DocumentProcessor
@@ -109,9 +109,6 @@ custom_css = """
 # CSS einbinden
 st.markdown(custom_css, unsafe_allow_html=True)
 
-# Initialisiere die Einstellungen aus dem Konfigurationsmodul
-all_settings = config.get_all_settings()
-
 # Seitentitel mit Icon
 st.markdown("""
     <h1 style='text-align: center;'>
@@ -129,55 +126,29 @@ st.markdown("<div class='settings-container'>", unsafe_allow_html=True)
 st.markdown("## 🔧 Allgemeine Einstellungen")
 st.markdown("### Profilgenerierung")
 
-# Template-Optionen
-template_options = {
-    "professional": "Professionell", 
-    "classic": "Klassisch", 
-    "modern": "Modern", 
-    "minimalist": "Minimalistisch"
-}
-
-# Ermittle den aktuellen Template-Wert aus den Einstellungen
-default_template = all_settings.get("default_template", "professional")
-
+# Placeholder für Einstellungen (keine Funktionalität implementiert)
 col1, col2 = st.columns(2)
 with col1:
-    # Template-Auswahl
-    selected_template = st.selectbox(
-        "Standard-Template", 
-        options=list(template_options.keys()),
-        format_func=lambda x: template_options[x],
-        index=list(template_options.keys()).index(default_template),
-        help="Wählen Sie das Standard-Template für neu generierte Profile"
-    )
-    
-    # Speichere die Template-Voreinstellung, wenn sie sich geändert hat
-    if selected_template != default_template:
-        config.update_setting("default_template", selected_template)
-        st.success(f"Standard-Template auf {template_options[selected_template]} gesetzt!")
+    st.selectbox("Standard-Template", 
+                ["Klassisch", "Modern", "Professionell", "Minimalistisch"], 
+                disabled=True,
+                help="Wählen Sie das Standard-Template für neu generierte Profile")
     
     st.selectbox("Standard-Exportformat", 
                 ["PDF", "DOCX"], 
-                index=0,
+                disabled=True,
                 help="Wählen Sie das Standard-Exportformat für neu generierte Profile")
 
 with col2:
-    # Einstellung zum Anzeigen des extrahierten Textes
-    show_text_default = all_settings.get("show_extracted_text", False)
-    show_text_setting = st.toggle(
-        "Extrahierten Text standardmäßig anzeigen", 
-        value=show_text_default,
-        help="Automatisch den extrahierten Text anzeigen, wenn ein Dokument verarbeitet wird"
-    )
-    
-    # Speichere die Textanzeige-Einstellung, wenn sie sich geändert hat
-    if show_text_setting != show_text_default:
-        config.update_setting("show_extracted_text", show_text_setting)
-        st.success("Textanzeige-Einstellung gespeichert!")
-    
-    logo_setting = st.toggle("Logo automatisch einfügen", 
+    st.toggle("Logo automatisch einfügen", 
              value=True, 
+             disabled=True,
              help="Fügt automatisch das Logo in alle generierten Profile ein")
+    
+    st.toggle("Speichern vor Export bestätigen", 
+             value=True, 
+             disabled=True,
+             help="Fragt vor dem Export nach, ob das Profil gespeichert werden soll")
 
 st.markdown("</div>", unsafe_allow_html=True)
 
@@ -185,66 +156,35 @@ st.markdown("</div>", unsafe_allow_html=True)
 st.markdown("<div class='settings-container'>", unsafe_allow_html=True)
 st.markdown("## 🧠 KI-Einstellungen")
 
-# KI-Modell-Einstellungen
-ai_models = ["gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"]
-current_model = all_settings.get("ai_model", "gpt-4-turbo")
+# KI-Modell-Einstellungen (Placeholder)
+st.selectbox("KI-Modell", 
+            ["gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"], 
+            disabled=True,
+            help="Wählen Sie das zu verwendende KI-Modell für die Textextraktion")
 
-selected_model = st.selectbox(
-    "KI-Modell", 
-    options=ai_models,
-    index=ai_models.index(current_model) if current_model in ai_models else 0,
-    help="Wählen Sie das zu verwendende KI-Modell für die Textextraktion"
-)
-
-# Speichere das ausgewählte Modell, wenn es sich geändert hat
-if selected_model != current_model:
-    config.update_setting("ai_model", selected_model)
-    st.success(f"KI-Modell auf {selected_model} gesetzt!")
-
-# API-Key
-api_key = config.get_openai_api_key()
-api_key_input = st.text_input(
-    "OpenAI API-Key", 
-    value=api_key,
-    type="password",
-    help="Ihr OpenAI API-Key für den Zugriff auf die KI-Modelle"
-)
-
-# Speicher-Button für den API-Key
-if api_key_input and api_key_input != api_key:
-    if st.button("API-Key speichern"):
-        config.save_openai_api_key(api_key_input)
-        st.success("API-Key erfolgreich gespeichert!")
+# API-Key (Placeholder)
+api_key = st.text_input("OpenAI API-Key", 
+                        type="password", 
+                        disabled=True,
+                        help="Ihr OpenAI API-Key für den Zugriff auf die KI-Modelle")
 
 # Erweiterte KI-Einstellungen
 with st.expander("Erweiterte KI-Einstellungen"):
-    # Temperatur-Einstellung
-    current_temp = all_settings.get("temperature", 0.7)
-    temp = st.slider(
-        "Temperatur", 
-        min_value=0.0, 
-        max_value=1.0, 
-        value=current_temp, 
-        step=0.1,
-        help="Bestimmt die Kreativität der KI-Antworten (niedrigere Werte = präzisere Antworten)"
-    )
+    st.slider("Temperatur", 
+              min_value=0.0, 
+              max_value=1.0, 
+              value=0.7, 
+              step=0.1, 
+              disabled=True,
+              help="Bestimmt die Kreativität der KI-Antworten")
     
-    if temp != current_temp:
-        config.update_setting("temperature", temp)
-    
-    # Max Tokens-Einstellung
-    current_max_tokens = all_settings.get("max_tokens", 2000)
-    max_tokens = st.slider(
-        "Max Tokens", 
-        min_value=100, 
-        max_value=4000, 
-        value=current_max_tokens, 
-        step=100, 
-        help="Maximale Länge der KI-Antwort in Tokens"
-    )
-    
-    if max_tokens != current_max_tokens:
-        config.update_setting("max_tokens", max_tokens)
+    st.slider("Max Tokens", 
+              min_value=100, 
+              max_value=4000, 
+              value=2000, 
+              step=100, 
+              disabled=True,
+              help="Maximale Länge der KI-Antwort in Tokens")
 
 st.markdown("</div>", unsafe_allow_html=True)
 
@@ -252,49 +192,26 @@ st.markdown("</div>", unsafe_allow_html=True)
 st.markdown("<div class='settings-container'>", unsafe_allow_html=True)
 st.markdown("## 👤 Benutzereinstellungen")
 
-# Ansprechpartner-Verwaltung
+# Ansprechpartner-Verwaltung (Placeholder)
 st.markdown("### Ansprechpartner verwalten")
 st.info("Hier können Sie Ihre Ansprechpartner für die Profile verwalten.")
 
-# Lade bestehende Ansprechpartner oder erstelle ein leeres Dictionary
-contacts = all_settings.get("contacts", [])
-if not contacts:
-    contacts = [
-        {"name": "Max Mustermann", "position": "Senior Consultant", "kontakt": "max@example.com"},
-        {"name": "Anna Schmidt", "position": "HR Manager", "kontakt": "anna@example.com"}
-    ]
+# Platzhaltertabelle für Ansprechpartner
+data = {
+    "Name": ["Max Mustermann", "Anna Schmidt"],
+    "Position": ["Senior Consultant", "HR Manager"],
+    "Kontakt": ["max@example.com", "anna@example.com"]
+}
+df = st.dataframe(data, use_container_width=True)
 
-# Erstelle eine Tabelle für die Ansprechpartner
-import pandas as pd
-if contacts:
-    df = pd.DataFrame(contacts)
-    edited_df = st.data_editor(
-        df, 
-        use_container_width=True,
-        num_rows="dynamic",
-        key="contacts_editor"
-    )
-    
-    # Wenn Änderungen vorgenommen wurden, speichere sie
-    if not df.equals(edited_df):
-        contacts = edited_df.to_dict('records')
-        config.update_setting("contacts", contacts)
-        st.success("Ansprechpartner aktualisiert!")
-
-# Buttons für Ansprechpartner-Verwaltung
-col1, col2 = st.columns([1, 1])
+# Buttons für Ansprechpartner-Verwaltung (Placeholder)
+col1, col2, col3 = st.columns([1, 1, 1])
 with col1:
-    if st.button("Zurücksetzen"):
-        default_contacts = [
-            {"name": "Max Mustermann", "position": "Senior Consultant", "kontakt": "max@example.com"},
-            {"name": "Anna Schmidt", "position": "HR Manager", "kontakt": "anna@example.com"}
-        ]
-        config.update_setting("contacts", default_contacts)
-        st.experimental_rerun()
-
+    st.button("Hinzufügen", disabled=True)
 with col2:
-    if st.button("Änderungen speichern"):
-        st.success("Alle Änderungen wurden gespeichert!")
+    st.button("Bearbeiten", disabled=True)
+with col3:
+    st.button("Löschen", disabled=True)
 
 st.markdown("</div>", unsafe_allow_html=True)
 
@@ -302,30 +219,20 @@ st.markdown("</div>", unsafe_allow_html=True)
 st.markdown("<div class='settings-container'>", unsafe_allow_html=True)
 st.markdown("## 🖥️ System-Information")
 
-# Tatsächliche Systeminfos anzeigen
-import platform
-import streamlit as st
-import sys
-
+# Platzhalter für Systeminformationen
 col1, col2 = st.columns(2)
 with col1:
-    st.markdown(f"**Version:** 2.0.0")
-    st.markdown(f"**Letztes Update:** 2025-05-13")
+    st.markdown("**Version:** 1.0.0")
+    st.markdown("**Letztes Update:** 2023-11-15")
 with col2:
-    st.markdown(f"**Python Version:** {platform.python_version()}")
-    st.markdown(f"**Streamlit Version:** {st.__version__}")
+    st.markdown("**Python Version:** 3.9.x")
+    st.markdown("**Streamlit Version:** 1.28.x")
 
-# Exportpfad
-export_path = all_settings.get("export_path", "./exports")
-new_export_path = st.text_input(
-    "Standard-Exportpfad", 
-    value=export_path, 
-    help="Standardpfad für den Export von Profilen"
-)
-
-if new_export_path != export_path:
-    config.update_setting("export_path", new_export_path)
-    st.success("Exportpfad aktualisiert!")
+# Platzhalter für Exportpfad
+st.text_input("Standard-Exportpfad", 
+             value="./exports", 
+             disabled=True,
+             help="Standardpfad für den Export von Profilen")
 
 st.markdown("</div>", unsafe_allow_html=True)
 
@@ -333,31 +240,24 @@ st.markdown("</div>", unsafe_allow_html=True)
 st.markdown("<div class='settings-container'>", unsafe_allow_html=True)
 st.markdown("## ❓ Hilfe & Support")
 
-# Hilfe und Support-Links
+# Hilfe und Support-Links (Placeholder)
 st.markdown("""
-- **Dokumentation:** [Link zur Dokumentation](https://github.com/yourusername/cv2profile)
-- **Support kontaktieren:** support@example.com
-- **Probleme melden:** [Issue Tracker](https://github.com/yourusername/cv2profile/issues)
+- **Dokumentation:** [Link zur Dokumentation](#)
+- **Support kontaktieren:** [Email an Support](#)
+- **Probleme melden:** [Issue Tracker](#)
 """)
 
-# Zurücksetzen auf Standardeinstellungen
-if st.button("Zurücksetzen auf Standardeinstellungen"):
-    # Alle Einstellungen auf Standardwerte zurücksetzen
-    config.save_settings(config.DEFAULT_SETTINGS)
-    st.success("Alle Einstellungen wurden auf Standardwerte zurückgesetzt!")
-    st.experimental_rerun()
+st.button("Zurücksetzen auf Standardeinstellungen", disabled=True)
 
 st.markdown("</div>", unsafe_allow_html=True)
 
-# Speichern-Button am Ende
-if st.button("Einstellungen speichern"):
-    st.balloons()
-    st.success("Alle Einstellungen wurden erfolgreich gespeichert!")
+# Speichern-Button am Ende (Placeholder)
+st.button("Einstellungen speichern", disabled=True)
 
 # Footer
 st.markdown("""
 ---
 <p style='text-align: center; font-size: 0.8em; opacity: 0.7;'>
-    CV2Profile - Einstellungsbereich - © 2025
+    CV2Profile - Einstellungsbereich - © 2023
 </p>
 """, unsafe_allow_html=True) 

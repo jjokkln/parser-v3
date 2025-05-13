@@ -12,6 +12,7 @@ Diese Anwendung ist ein leistungsstarker CV-Parser, der Lebensläufe automatisch
 - **Strukturierte Profilerstellung**: Generierung standardisierter Profile im PDF-Format
 - **Benutzerfreundliche Oberfläche**: Einfache Handhabung durch Streamlit-Frontend
 - **Benutzerverwaltete Einstellungen**: Speichern von Voreinstellungen wie API-Keys und bevorzugten Templates
+- **HTTPS-Kompatibilität**: Bilder werden auf HTTP- und HTTPS-Servern korrekt angezeigt
 
 ## Detaillierte Projektstruktur
 
@@ -35,7 +36,8 @@ CV2Profile/
 │   │
 │   ├── utils/                     # Hilfsfunktionen
 │   │   ├── __init__.py           # Package-Initialisierung
-│   │   └── config.py             # Konfigurationsmanagement (API-Keys, etc.)
+│   │   ├── config.py             # Konfigurationsmanagement (API-Keys, etc.)
+│   │   └── image_utils.py        # Bild-Utilities für HTTPS-Kompatibilität
 │   │
 │   ├── templates/                 # Template-Generierung
 │   │   ├── __init__.py           # Package-Initialisierung
@@ -48,6 +50,9 @@ CV2Profile/
 │   ├── cv2profile-loho.png       # Anwendungslogo
 │   ├── Profilvorlage Seite 1.png # Designvorlagen
 │   └── Profilvorlage Seite 2.png # Designvorlagen
+│
+├── static/                        # Statische Dateien für HTTPS-Server
+│   └── images/                    # Bilder für HTTPS-Kompatibilität
 │
 ├── context/                       # Projektdokumentation und -kontext
 │   ├── Context.md                # Hauptdokumentation (diese Datei)
@@ -87,7 +92,12 @@ CV2Profile/
 
 ### PDF-Vorlagen anpassen
 - **Template-Generator**: `src/templates/template_generator.py` - PDF-Generierung und Design
+- **Verfügbare Templates**: Classic (Standard), Modern (zweispaltig, weinrot/weiß), Professional, Minimalist
 - **Logos und Bilder**: `sources/` - Bilder und Logos für die PDF-Vorlagen
+
+### Bild-Verwaltung anpassen
+- **Bild-Utilities**: `src/utils/image_utils.py` - Funktionen für die HTTPS-kompatible Bildverwaltung
+- **Statische Bilder**: `static/images/` - Speicherort für HTTPS-kompatible Bilddateien
 
 ### Konfiguration anpassen
 - **Konfigurationsmanagement**: `src/utils/config.py` - Verwaltet Benutzereinstellungen
@@ -123,10 +133,15 @@ Die Anwendung besteht aus mehreren Modulen:
    - Bearbeitungsmöglichkeiten für extrahierte Daten
    - Download-Option für generierte Profile
 
-5. **config.py** (NEU in v2): Verwaltung von Benutzereinstellungen
+5. **config.py**: Verwaltung von Benutzereinstellungen
    - Speichert den OpenAI API-Key sicher im Benutzerverzeichnis
    - Verwaltet benutzerdefinierte Einstellungen wie Template-Voreinstellungen
    - Ermöglicht das Anpassen von Optionen wie Textanzeige und Anonymisierung
+
+6. **image_utils.py** (NEU): Verwaltung von Bildern für verschiedene Umgebungen
+   - Stellt HTTPS-Kompatibilität für Bilder sicher
+   - Kopiert Bilder automatisch in das static-Verzeichnis
+   - Ermöglicht konsistente Bildanzeige auf allen Plattformen
 
 ## Anwendungsfälle
 
@@ -170,10 +185,16 @@ Die Anwendung besteht aus mehreren Modulen:
 5. Optional: Anonymisieren der persönlichen Daten aktivieren
 6. Profil generieren und herunterladen
 
-## Aktuelle Version (v2)
+## Aktuelle Version (v3)
 
-Die aktuelle Version (v2) enthält folgende Verbesserungen:
+Die aktuelle Version (v3) enthält folgende Verbesserungen:
 
+- **HTTPS-Kompatibilität**: Bilder werden sowohl lokal als auch auf HTTPS-Servern korrekt angezeigt
+- **Automatische Bildverwaltung**: Bilder werden automatisch in das static-Verzeichnis kopiert
+- **Verbesserte Profilvorlagen**: 
+  - Optimiertes Layout für bessere Lesbarkeit
+  - Neues modernes Template im zweispaltigen Design (weinrot/weiß)
+  - Verbesserte visuelle Darstellung von Fähigkeiten und Sprachen
 - **API-Key-Verwaltung**: Der OpenAI API-Key wird sicher in `~/.cv2profile/settings.json` gespeichert
 - **Benutzerverwaltete Einstellungen**: 
   - Auswahl des Standard-Templates (Klassisch, Modern, Professionell, Minimalistisch)
@@ -183,12 +204,8 @@ Die aktuelle Version (v2) enthält folgende Verbesserungen:
   - Hervorhebung des ausgewählten Standard-Templates
   - Speichern von bevorzugten Templates für zukünftige Verwendung
   - Eindeutige Schlüssel für Checkbox-Widgets zur Vermeidung von Konflikten
-- **Datenschutz und Sicherheit**: 
-  - Alle Einstellungen werden sicher im Benutzerverzeichnis gespeichert
-  - Keine Datenübertragung außerhalb des Computers des Benutzers
-  - Umgebungsvariablen haben Vorrang, wenn ein API-Key gesetzt ist
 
-## Bekannte Probleme in v2
+## Bekannte Probleme in v3
 
 - Fehler bei der PDF-Vorschau: In Schritt 3 kann es zu einem Fehler kommen, wenn `st.session_state.preview_pdf` den Wert `None` hat
 - Der Fehler tritt auf in der Funktion `display_pdf()` in Zeile 48 der app.py

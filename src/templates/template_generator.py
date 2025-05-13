@@ -12,6 +12,7 @@ from docx.shared import Pt, RGBColor, Inches, Cm
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
+from src.utils.image_utils import get_image_path, ensure_images_in_static
 
 class ProfileGenerator:
     """Klasse zur Erstellung von PDF-Profilen aus strukturierten Daten"""
@@ -545,21 +546,282 @@ class ProfileGenerator:
         elements = []
         
         try:
-            # Korrekte Pfade zum Verzeichnis der Quellendateien
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            sources_dir = os.path.join(os.path.dirname(os.path.dirname(current_dir)), 'sources')
+            # Stelle sicher, dass alle Bilder im static-Verzeichnis verfügbar sind (für HTTPS-Kompatibilität)
+            ensure_images_in_static()
             
-            # Wenn sources nicht existiert, versuche relative Pfade vom Arbeitsverzeichnis
-            if not os.path.exists(sources_dir):
-                sources_dir = 'sources'
-                # Erstelle das Verzeichnis, falls es nicht existiert
-                if not os.path.exists(sources_dir):
-                    os.makedirs(sources_dir, exist_ok=True)
-                    print(f"Verzeichnis '{sources_dir}' wurde erstellt")
+            # Verwende die Image-Utility für den Pfad
+            # Bei HTTPS-Server nutze use_static=True, für Localhost use_static=False
+            # Standardmäßig verwenden wir das static-Verzeichnis für HTTPS-Kompatibilität
+            use_https_compatible = True
             
-            # GALDORA Logo aus dem sources-Ordner einbinden
+            # Je nach gewähltem Template unterschiedliche Layouts erstellen
+            if template == "modern":
+                # MODERN TEMPLATE (basierend auf dem Bild)
+                # Verwende das GALDORA Logo aus dem richtigen Ordner
+                logo_path = get_image_path('Galdoralogo.png', use_static=use_https_compatible)
+                
+                # Erstelle eine Tabelle für das Logo oben
+                if os.path.exists(logo_path) and os.path.isfile(logo_path):
+                    try:
+                        # Logo-Größe korrigieren (Original-Proportionen beibehalten)
+                        from PIL import Image as PILImage
+                        img_pil = PILImage.open(logo_path)
+                        img_width, img_height = img_pil.size
+                        aspect_ratio = img_width / img_height
+                        
+                        target_width = 150
+                        target_height = target_width / aspect_ratio
+                        
+                        img = Image(logo_path, width=target_width, height=target_height)
+                        elements.append(Table([[img]], colWidths=[A4[0] - 40*mm]))
+                        elements.append(Spacer(1, 0.5*cm))
+                    except Exception as e:
+                        print(f"Fehler beim Laden des Logos: {str(e)}")
+                        elements.append(Paragraph("GALDORA", self.custom_styles['GaldoraLogo']))
+                else:
+                    print(f"Logo-Datei nicht gefunden: {logo_path}")
+                    elements.append(Paragraph("GALDORA", self.custom_styles['GaldoraLogo']))
+                
+                # Persönliche Daten
+                personal_data = profile_data.get('persönliche_daten', {})
+                name = personal_data.get('name', 'Profil')
+                
+                # Moderne Layout mit zwei Spalten erstellen
+                # Linke Spalte: Foto und persönliche Daten
+                # Rechte Spalte: Berufserfahrung, Ausbildung, Skills, etc.
+                
+                # Erstelle Stil für den Namen im modernen Template (größer und fett)
+                modern_name_style = ParagraphStyle(
+                    'ModernName',
+                    parent=self.custom_styles['Normal'],
+                    fontSize=16,
+                    fontName='Helvetica-Bold',
+                    spaceAfter=0.5*cm,
+                    alignment=0
+                )
+                
+                # Erstelle Stil für die Kategorie-Überschriften (links)
+                modern_category_style = ParagraphStyle(
+                    'ModernCategory',
+                    parent=self.custom_styles['Normal'],
+                    fontSize=14,
+                    fontName='Helvetica-Bold',
+                    textColor=colors.HexColor('#1973B8'),  # GALDORA Blau
+                    spaceAfter=0.3*cm,
+                    alignment=0
+                )
+                
+                # Erstelle Stil für die linke Spalte (Kategorien)
+                modern_left_style = ParagraphStyle(
+                    'ModernLeft',
+                    parent=self.custom_styles['Normal'],
+                    fontSize=10,
+                    fontName='Helvetica-Bold',
+                    spaceAfter=0.2*cm,
+                    alignment=0
+                )
+                
+                # Erstelle Stil für die rechte Spalte (Content)
+                modern_right_style = ParagraphStyle(
+                    'ModernRight', 
+                    parent=self.custom_styles['Normal'],
+                    fontSize=10,
+                    spaceAfter=0.2*cm,
+                    alignment=0
+                )
+                
+                # Inhalte für beide Spalten vorbereiten
+                left_content = []
+                right_content = []
+                
+                # Name oben rechts platzieren
+                right_content.append(Paragraph(name, modern_name_style))
+                
+                # Linke Spalte: Profilbild
+                # Überprüfen, ob ein Profilbild vorhanden ist
+                profile_image_path = personal_data.get("profile_image", None)
+                
+                if profile_image_path and os.path.exists(profile_image_path):
+                    try:
+                        # Profilbild laden und anzeigen
+                        from PIL import Image as PILImage
+                        img_pil = PILImage.open(profile_image_path)
+                        img_width, img_height = img_pil.size
+                        aspect_ratio = img_width / img_height
+                        
+                        # Standardgröße für das Profilbild
+                        photo_width = 120
+                        photo_height = photo_width / aspect_ratio
+                        
+                        # Profilbild im PDF einfügen
+                        profile_img = Image(profile_image_path, width=photo_width, height=photo_height)
+                        left_content.append(profile_img)
+                    except Exception as e:
+                        print(f"Fehler beim Laden des Profilbilds: {str(e)}")
+                        # Fallback: "FOTO" Platzhalter anzeigen
+                        photo_placeholder = Paragraph("FOTO", self.custom_styles['Normal'])
+                        left_content.append(photo_placeholder)
+                else:
+                    # Kein Bild vorhanden, Platzhalter anzeigen
+                    photo_placeholder = Paragraph("FOTO", self.custom_styles['Normal'])
+                    left_content.append(photo_placeholder)
+                left_content.append(Spacer(1, 1*cm))
+            
+                # Linke Spalte: SOFTWARE
+                left_content.append(Paragraph("SOFTWARE", modern_category_style))
+                skills = profile_data.get('skills', {})
+                software_skills = skills.get('software', [])
+                for skill in software_skills:
+                    try:
+                        name = skill.get('name', '')
+                        level = skill.get('level', '')
+                        if name and level:
+                            left_content.append(Paragraph(f"• {name} - {level}", self.custom_styles['Normal']))
+                        elif name:
+                            left_content.append(Paragraph(f"• {name}", self.custom_styles['Normal']))
+                    except Exception as e:
+                        print(f"Fehler bei Software-Skill: {str(e)}")
+                left_content.append(Spacer(1, 1*cm))
+                
+                # Linke Spalte: SPRACHEN
+                left_content.append(Paragraph("SPRACHEN", modern_category_style))
+                language_skills = skills.get('sprachen', [])
+                for skill in language_skills:
+                    try:
+                        name = skill.get('name', '')
+                        level = skill.get('level', '')
+                        if name and level:
+                            if name == "Deutsch":
+                                left_content.append(Paragraph(f"{name}: Muttersprache", self.custom_styles['Normal']))
+                            else:
+                                # Sprachlevel als Punkte darstellen
+                                level_dots = ""
+                                if level.lower() in ["gut", "sehr gut", "fließend", "c1", "c2"]:
+                                    level_dots = "●●●●○"
+                                elif level.lower() in ["mittel", "befriedigend", "b1", "b2"]:
+                                    level_dots = "●●●○○"
+                                else:
+                                    level_dots = "●●○○○"
+                                    
+                                left_content.append(Paragraph(f"{name}", self.custom_styles['Normal']))
+                                left_content.append(Paragraph(f"{level_dots}", self.custom_styles['Normal']))
+                        elif name:
+                            left_content.append(Paragraph(f"{name}", self.custom_styles['Normal']))
+                    except Exception as e:
+                        print(f"Fehler bei Sprach-Skill: {str(e)}")
+                left_content.append(Spacer(1, 1*cm))
+                
+                # Linke Spalte: HOBBYS
+                left_content.append(Paragraph("HOBBYS", modern_category_style))
+                hobbys = profile_data.get('hobbys', [])
+                if hobbys:
+                    for hobby in hobbys:
+                        left_content.append(Paragraph(f"• {hobby}", self.custom_styles['Normal']))
+                else:
+                    left_content.append(Paragraph("• Keine Angaben", self.custom_styles['Normal']))
+                
+                # Rechte Spalte: KURZPROFIL
+                right_content.append(Paragraph("KURZPROFIL", modern_category_style))
+                kurzprofil = profile_data.get('kurzprofil', '')
+                if kurzprofil:
+                    right_content.append(Paragraph(kurzprofil, self.custom_styles['Normal']))
+                else:
+                    right_content.append(Paragraph("Kein Kurzprofil angegeben", self.custom_styles['Normal']))
+                right_content.append(Spacer(1, 0.5*cm))
+                
+                # Rechte Spalte: BERUFSERFAHRUNG
+                right_content.append(Paragraph("BERUFSERFAHRUNG", modern_category_style))
+                berufserfahrung = profile_data.get('berufserfahrung', [])
+                if berufserfahrung:
+                    for erfahrung in berufserfahrung:
+                        try:
+                            zeitraum = erfahrung.get('zeitraum', '')
+                            unternehmen = erfahrung.get('unternehmen', '')
+                            position = erfahrung.get('position', '')
+                            
+                            # Zeitraum und Unternehmen
+                            right_content.append(Paragraph(f"{unternehmen}", self.custom_styles['Company']))
+                            right_content.append(Paragraph(f"{position}", self.custom_styles['Position']))
+                            right_content.append(Paragraph(f"{zeitraum}", self.custom_styles['Normal']))
+                            
+                            # Aufgaben
+                            aufgaben = erfahrung.get('aufgaben', [])
+                            for aufgabe in aufgaben[:5]:  # Max 5 Aufgaben pro Position
+                                right_content.append(Paragraph(f"• {aufgabe}", self.custom_styles['Normal']))
+                            
+                            right_content.append(Spacer(1, 0.3*cm))
+                        except Exception as e:
+                            print(f"Fehler bei Berufserfahrung: {str(e)}")
+                else:
+                    right_content.append(Paragraph("Keine Berufserfahrung angegeben", self.custom_styles['Normal']))
+                right_content.append(Spacer(1, 0.5*cm))
+                
+                # Rechte Spalte: AUSBILDUNG
+                right_content.append(Paragraph("AUSBILDUNG", modern_category_style))
+                ausbildungen = profile_data.get('ausbildung', [])
+                if ausbildungen:
+                    for ausbildung in ausbildungen:
+                        try:
+                            zeitraum = ausbildung.get('zeitraum', '')
+                            institution = ausbildung.get('institution', '')
+                            abschluss = ausbildung.get('abschluss', '')
+                            
+                            if institution.startswith("Studium"):
+                                right_content.append(Paragraph(f"{institution}", self.custom_styles['Company']))
+                            else:
+                                right_content.append(Paragraph(f"Universität {institution}", self.custom_styles['Company']))
+                            
+                            right_content.append(Paragraph(f"Master of Business Administration, B. Sc.", self.custom_styles['Position']))
+                            right_content.append(Paragraph(f"{zeitraum}", self.custom_styles['Normal']))
+                            
+                            right_content.append(Spacer(1, 0.3*cm))
+                        except Exception as e:
+                            print(f"Fehler bei Ausbildung: {str(e)}")
+                else:
+                    right_content.append(Paragraph("Keine Ausbildung angegeben", self.custom_styles['Normal']))
+                
+                # Erstelle die zweispaltige Haupttabelle
+                # 30% Breite für linke Spalte, 65% für rechte Spalte
+                col_widths = [A4[0] * 0.25, A4[0] * 0.65]
+                
+                # Setze Background-Farbe für linke Spalte (weinrot wie im Bild)
+                left_column_color = colors.HexColor('#9e3e54')  # Weinrot
+                
+                # Erstelle einen Container für die linke und rechte Spalte
+                left_column = Table([[left_content]], colWidths=[col_widths[0] - 10*mm])
+                right_column = Table([[right_content]], colWidths=[col_widths[1] - 10*mm])
+                
+                # Setze Style für die Spalten
+                left_column.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, -1), left_column_color),
+                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                    ('TOPPADDING', (0, 0), (-1, -1), 15),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 15),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 15),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 15),
+                    ('TEXTCOLOR', (0, 0), (-1, -1), colors.white),
+                ]))
+                
+                right_column.setStyle(TableStyle([
+                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                    ('TOPPADDING', (0, 0), (-1, -1), 15),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 15),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 15),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 15),
+                ]))
+                
+                # Erstelle die Haupttabelle mit beiden Spalten
+                main_table = Table([[left_column, right_column]], colWidths=col_widths)
+                main_table.setStyle(TableStyle([
+                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ]))
+                
+                elements.append(main_table)
+                
+            else:  # Classic Template (default)
+                # GALDORA Logo aus dem richtigen Ordner einbinden
             # Logo weiter nach oben schieben (ohne Abstand)
-            logo_path = os.path.join(sources_dir, 'Galdoralogo.png')
+                logo_path = get_image_path('Galdoralogo.png', use_static=use_https_compatible)
             
             # Erstelle eine Tabelle für das Logo oben
             if os.path.exists(logo_path) and os.path.isfile(logo_path):
@@ -576,9 +838,20 @@ class ProfileGenerator:
                     target_height = target_width / aspect_ratio
                     
                     img = Image(logo_path, width=target_width, height=target_height)
-                    # Logo-Tabelle für korrektes Alignment links
-                    logo_table = Table([[img]], colWidths=[A4[0] - 40*mm])
-                    logo_table.setStyle(TableStyle([('ALIGN', (0, 0), (0, 0), 'LEFT')]))
+                    
+                    # Erstelle einen leeren Platz für den Profilbereich neben dem Logo
+                    profile_placeholder = Paragraph("", self.custom_styles['Normal'])
+                    
+                    # Logo-Tabelle mit zwei Spalten: Logo links, Platz für Profil rechts
+                    # Passt die Größen an, um genug Platz für das Profil neben dem Logo zu lassen
+                    logo_table = Table([[img, profile_placeholder]], 
+                                   colWidths=[target_width + 10, A4[0] - target_width - 50*mm])
+                    
+                    logo_table.setStyle(TableStyle([
+                        ('ALIGN', (0, 0), (0, 0), 'LEFT'),   # Logo links ausrichten
+                        ('ALIGN', (1, 0), (1, 0), 'RIGHT'),  # Platzhalter rechts ausrichten
+                        ('VALIGN', (0, 0), (1, 0), 'TOP'),   # Beide Zellen oben ausrichten
+                    ]))
                     elements.append(logo_table)
                     
                     # Kleinerer Abstand nach dem Logo
@@ -622,6 +895,9 @@ class ProfileGenerator:
             elements.append(Spacer(1, 0.5*cm))
             elements.append(HRFlowable(width="100%", thickness=1, lineCap='round', color=colors.lightgrey))
             elements.append(Spacer(1, 0.5*cm))
+                
+                # CLASSIC TEMPLATE - Rest des Codes bleibt unverändert
+                # (Bestehender Code für das klassische Template)
             
             # Persönliche Informationen
             elements.append(Paragraph(f"Wohnort: {personal_data.get('wohnort', '')}", self.custom_styles['LabelInline']))
@@ -689,15 +965,15 @@ class ProfileGenerator:
                         for i in range(1, len(right_column_content)):
                             data.append([Paragraph('', self.custom_styles['Normal']), right_column_content[i]])
                         
-                        # Tabelle mit definierter Breite (10% links, 75% rechts) - mehr Platz für die rechte Spalte
-                        col_widths = [A4[0] * 0.12, A4[0] * 0.68]
+                            # Tabelle mit definierter Breite (10% links, 75% rechts)
+                            col_widths = [A4[0] * 0.15, A4[0] * 0.65]
                         
                         table = Table(data, colWidths=col_widths)
                         table.setStyle(TableStyle([
                             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                             ('ALIGN', (0, 0), (0, -1), 'LEFT'),
                             ('ALIGN', (1, 0), (1, -1), 'LEFT'),
-                            ('LEFTPADDING', (1, 0), (1, -1), 20),  # Erhöhter Abstand zwischen den Spalten
+                                ('LEFTPADDING', (1, 0), (1, -1), 2*cm),  # Ca. 2cm Einrückung für bessere Lesbarkeit
                         ]))
                         
                         elements.append(table)
@@ -756,14 +1032,14 @@ class ProfileGenerator:
                             data.append([Paragraph('', self.custom_styles['Normal']), right_column_content[i]])
                         
                         # Tabelle mit definierter Breite (10% links, 75% rechts)
-                        col_widths = [A4[0] * 0.12, A4[0] * 0.68]
+                            col_widths = [A4[0] * 0.15, A4[0] * 0.65]
                         
                         table = Table(data, colWidths=col_widths)
                         table.setStyle(TableStyle([
                             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                             ('ALIGN', (0, 0), (0, -1), 'LEFT'),
                             ('ALIGN', (1, 0), (1, -1), 'LEFT'),
-                            ('LEFTPADDING', (1, 0), (1, -1), 20),  # Erhöhter Abstand zwischen den Spalten
+                                ('LEFTPADDING', (1, 0), (1, -1), 2*cm),  # Ca. 2cm Einrückung für bessere Lesbarkeit
                         ]))
                         
                         elements.append(table)
@@ -809,14 +1085,14 @@ class ProfileGenerator:
                             data.append([Paragraph('', self.custom_styles['Normal']), right_column_content[i]])
                         
                         # Tabelle mit definierter Breite (10% links, 75% rechts)
-                        col_widths = [A4[0] * 0.12, A4[0] * 0.68]
+                            col_widths = [A4[0] * 0.15, A4[0] * 0.65]
                         
                         table = Table(data, colWidths=col_widths)
                         table.setStyle(TableStyle([
                             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                             ('ALIGN', (0, 0), (0, -1), 'LEFT'),
                             ('ALIGN', (1, 0), (1, -1), 'LEFT'),
-                            ('LEFTPADDING', (1, 0), (1, -1), 20),  # Erhöhter Abstand zwischen den Spalten
+                                ('LEFTPADDING', (1, 0), (1, -1), 2*cm),  # Ca. 2cm Einrückung für bessere Lesbarkeit
                         ]))
                         
                         elements.append(table)
@@ -829,7 +1105,7 @@ class ProfileGenerator:
             else:
                 elements.append(Paragraph("Keine Weiterbildungen angegeben", self.custom_styles['Normal']))
             
-            # Footer mit GALDORA Kontaktinformationen
+            # Footer mit GALDORA Kontaktinformationen für beide Templates
             elements.append(Spacer(1, 1.5*cm))
             elements.append(HRFlowable(width="100%", thickness=1, lineCap='round', color=colors.lightgrey, spaceBefore=0.5*cm))
             elements.append(Spacer(1, 0.2*cm))
@@ -837,15 +1113,12 @@ class ProfileGenerator:
             footer_text = "GALDORA Personalmanagement GmbH Co.KG\nVolksgartenstr. 85-89, 41065 Mönchengladbach\nE-Mail: info@galdora.de / Web: www.galdora.de"
             elements.append(Paragraph(footer_text, self.custom_styles['Footer']))
             
+            return elements
         except Exception as e:
-            print(f"Fehler beim Erstellen der Dokumentelemente: {str(e)}")
-            # Minimales Dokument erstellen, wenn ein Fehler auftritt
-            elements = [
-                Paragraph("GALDORA", self.custom_styles['GaldoraLogo']),
-                Paragraph("Fehler bei der Erstellung des Profils", self.custom_styles['Heading2']),
-                Paragraph("Es ist ein Fehler bei der Generierung des Dokuments aufgetreten. Bitte versuchen Sie es erneut oder kontaktieren Sie den Support.", self.custom_styles['Normal'])
-            ]
-        
+            print(f"Fehler bei der Erstellung der Dokumentelemente: {str(e)}")
+            # Einfache Elemente als Fallback
+            elements.append(Paragraph("FEHLER BEI DER ERSTELLUNG DES PROFILS", self.styles['Title']))
+            elements.append(Paragraph(f"Details: {str(e)}", self.styles['Normal']))
         return elements
 
 

@@ -15,16 +15,7 @@ CONFIG_FILE = CONFIG_DIR / "settings.json"
 DEFAULT_SETTINGS = {
     "openai_api_key": "",
     "default_template": "professional",
-    "show_extracted_text": False,
-    "ai_model": "gpt-4-turbo",
-    "temperature": 0.7,
-    "max_tokens": 2000,
-    "export_path": "./exports",
-    "contacts": [
-        {"name": "Max Mustermann", "position": "Senior Consultant", "kontakt": "max@example.com"},
-        {"name": "Anna Schmidt", "position": "HR Manager", "kontakt": "anna@example.com"}
-    ],
-    "auto_insert_logo": True
+    "show_extracted_text": False
 }
 
 def ensure_config_dir():
@@ -42,12 +33,7 @@ def load_settings():
     
     try:
         with open(CONFIG_FILE, "r") as f:
-            settings = json.load(f)
-            # Stelle sicher, dass alle Standardeinstellungen vorhanden sind
-            for key, value in DEFAULT_SETTINGS.items():
-                if key not in settings:
-                    settings[key] = value
-            return settings
+            return json.load(f)
     except Exception as e:
         print(f"Fehler beim Laden der Einstellungen: {e}")
         return DEFAULT_SETTINGS.copy()
@@ -89,28 +75,4 @@ def update_setting(key, value):
     """Aktualisiert eine einzelne Einstellung"""
     settings = load_settings()
     settings[key] = value
-    return save_settings(settings)
-
-def get_default_template():
-    """Gibt die Standard-Template-Einstellung zurück"""
-    settings = load_settings()
-    return settings.get("default_template", "professional")
-
-def get_ai_model():
-    """Gibt das aktuell konfigurierte KI-Modell zurück"""
-    settings = load_settings()
-    return settings.get("ai_model", "gpt-4-turbo")
-
-def get_contacts():
-    """Gibt die Liste der Ansprechpartner zurück"""
-    settings = load_settings()
-    return settings.get("contacts", [])
-
-def get_setting(key, default=None):
-    """Gibt eine spezifische Einstellung zurück oder den Default-Wert"""
-    settings = load_settings()
-    return settings.get(key, default)
-
-def reset_to_defaults():
-    """Setzt alle Einstellungen auf Standardwerte zurück"""
-    return save_settings(DEFAULT_SETTINGS.copy()) 
+    return save_settings(settings) 

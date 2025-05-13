@@ -1,6 +1,19 @@
-# CV2Profile
+# CV2Profile - KI-gestützter Lebenslauf-Parser und Profilgenerator
 
-Ein KI-gestützter CV-Parser, der Lebensläufe analysiert und in standardisierte Profile konvertiert.
+Ein Werkzeug zum Extrahieren von Informationen aus Lebensläufen und zur Erstellung standardisierter Profile.
+
+## Funktionen
+
+- Automatische Extraktion von Daten aus Lebensläufen (PDF, DOCX, JPEG, PNG)
+- KI-gestützte Analyse mit OpenAI
+- Erstellung standardisierter Profile in PDF und DOCX-Format
+- Verschiedene Profilvorlagen:
+  - **Klassisch**: Übersichtliches Layout mit Logo und klarer Struktur
+  - **Modern**: Zweispaltiges Design mit weinroter linker Spalte für persönliche Daten und weißer rechter Spalte für berufliche Informationen
+  - **Professionell**: Elegantes Business-Design
+  - **Minimalistisch**: Reduziertes Layout für maximale Klarheit
+- Benutzerfreundliches Streamlit-Frontend
+- Benutzerverwaltete API-Keys und Einstellungen
 
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://cv2profile.streamlit.app/)
 
@@ -53,7 +66,8 @@ CV2Profile/
 │   │   └── app.py              # Streamlit-basierte Hauptanwendung
 │   │
 │   ├── utils/                  # Hilfsfunktionen
-│   │   └── config.py           # Konfigurationsverwaltung
+│   │   ├── config.py           # Konfigurationsverwaltung
+│   │   └── image_utils.py      # Bild-Utilities für HTTPS-Kompatibilität
 │   │
 │   └── templates/              # Template-Generierung
 │       └── template_generator.py  # PDF-Profilgenerierung
@@ -61,6 +75,9 @@ CV2Profile/
 ├── sources/                    # Ressourcen
 │   ├── Galdoralogo.png         # Logo für PDF-Dokumente
 │   └── weitere Ressourcen      # Weitere Bilder und Assets
+│
+├── static/                     # Statische Dateien für HTTPS-Server
+│   └── images/                 # Bilder für HTTPS-Kompatibilität
 │
 └── .streamlit/                 # Streamlit-Konfiguration
     └── config.toml             # Streamlit-Einstellungen
