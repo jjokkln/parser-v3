@@ -1,76 +1,115 @@
-# CV2Profile Fortschrittsverfolgung
+# CV2Profile Aufgabenübersicht
 
-Dieses Dokument dient zur Nachverfolgung der Fortschritte im CV2Profile-Projekt. Es enthält eine Übersicht über abgeschlossene Aufgaben, aktuelle Arbeiten und geplante Funktionalitäten.
+Diese Übersicht dokumentiert alle Aufgaben im CV2Profile-Projekt, ihren aktuellen Status und die geplante Reihenfolge der Implementierung.
 
 ## 🟢 Abgeschlossene Aufgaben
 
+### Grundlegende Infrastruktur
+1. ✅ Projektumgebung einrichten (Python, Virtualenv, Abhängigkeiten)
+2. ✅ Repository-Struktur erstellen
+3. ✅ Grundlegende Streamlit-App implementieren
+
 ### Kernfunktionalität
-- ✅ Grundlegende Dokumentenverarbeitung (PDF, DOCX, JPG, PNG)
-- ✅ Textextraktion aus verschiedenen Dokumentformaten
-- ✅ OCR-Integration für Bilder und PDF-Dokumente ohne Text-Layer
-- ✅ OpenAI-Integration für Datenextraktion
-- ✅ Templating-System für PDF-Generierung
-- ✅ Benutzerfreundliche Streamlit-Oberfläche
+4. ✅ Dokument-Prozessor für unterschiedliche Formate (PDF, DOCX, JPG, PNG)
+5. ✅ Text-Extraktion mit Fallback auf OCR
+6. ✅ OpenAI-API-Integration für KI-basierte Textanalyse
+7. ✅ Datenstrukturierung und JSON-Extraktion
 
-### Version 2 Funktionen
-- ✅ API-Key-Verwaltung: Sichere Speicherung im Benutzerverzeichnis
-- ✅ Benutzerverwaltete Einstellungen (Templates, Anonymisierung)
-- ✅ Verbesserte Benutzeroberfläche mit hervorgehobenen Standardoptionen
-- ✅ Speicherung von bevorzugten Templates
+### Version 2 Features
+8. ✅ API-Key-Verwaltung (sichere Speicherung)
+9. ✅ Konfigurationssystem für Benutzereinstellungen
+10. ✅ Template-Auswahlsystem
+11. ✅ Anonymisierungsfunktion für sensible Daten
 
-### Version 3 Funktionen (Layout-Optimierungen)
-- ✅ Verbesserte Logo-Positionierung und Überschriftengestaltung
-- ✅ Optimierte Ansprechpartner-Sektion
-- ✅ Verbessertes zweispaltiges Layout mit angepassten Spaltenbreiten
-- ✅ Zusätzliche Trennlinien für bessere visuelle Struktur
+### Version 3 Features
+12. ✅ Layout-Optimierungen für PDF-Templates
+13. ✅ Verbesserte visuelle Hierarchie in PDF-Dokumenten
+14. ✅ Optimierte Spaltenbreiten und Abstände
+15. ✅ Überarbeitete Ansprechpartner-Sektion
 
 ## 🟡 Aktuelle Arbeiten
 
-### Bugfixes
-- 🔄 Behebung des PDF-Vorschau-Fehlers (TypeError bei None-Werten)
-- 🔄 Verbesserung der Fehlerbehandlung bei fehlgeschlagener OpenAI-Verbindung
+### Bugfixes und Optimierungen
+1. 🔄 PDF-Vorschau-Fehler beheben (TypeError bei None-Werten)
+2. 🔄 Fehlerbehandlung bei OpenAI-API-Verbindungsproblemen verbessern
+3. 🔄 Ladezeiten der Dokumentenverarbeitung optimieren
+4. 🔄 OpenAI-Token-Verbrauch reduzieren
 
-### Performance-Optimierungen
-- 🔄 Reduzierung der Ladezeiten bei der Dokumentenverarbeitung
-- 🔄 Optimierung der OpenAI-API-Nutzung (Token-Verbrauch minimieren)
-
-## 🔴 Geplante Funktionalitäten
+## 🔴 Geplante Aufgaben (priorisiert)
 
 ### Kurzfristige Ziele
-- ⏳ 🧩 PDF-Vorschau überall sichtbar machen
-  - Aktuell nur im lokalen Betrieb (localhost) verfügbar
-  - Vorschau auch im gehosteten Zustand (Streamlit HTTPS) ermöglichen
-  - Streamlit-Komponenten (st.components.v1.html) auf HTTPS-Kompatibilität prüfen
+1. 🧩 PDF-Vorschau überall verfügbar machen
+   - Vorschau auch im gehosteten Zustand (HTTPS) ermöglichen
+   - HTTPS-Kompatibilität der Komponenten sicherstellen
 
-- ⏳ 🧠 Eigene Templates erstellen können
-  - Funktion zum Hochladen oder Definieren eigener Vorlagen per Editor
-  - Templates im templates/-Ordner speichern oder per Config verwalten
+2. 🖼️ Profilbilder-Funktion einführen
+   - Bildupload-Funktion implementieren
+   - Integration in PDF-Templates
 
-- ⏳ 🎨 Standard-Templates bearbeiten können
-  - Bestehende Templates (Klassisch, Modern, Professionell, Minimalistisch) anpassbar machen
-  - Layout, Schriftarten, Farben etc. editierbar machen
-  - GUI für Änderungen in der App einbauen
+3. 🧠 Eigene Templates-Funktion entwickeln
+   - Upload-Mechanismus für Templates
+   - Template-Editor integrieren
 
-- ⏳ 🖼️ Profilbilder hinzufügen
-  - Bildupload-Funktion implementieren
-  - Platzierung im PDF an passender Stelle (z.B. oben links)
-  - PDF-Generator (template_generator.py) entsprechend anpassen
+4. 🎨 Standard-Templates-Editor erstellen
+   - Bearbeitungsfunktion für bestehende Templates
+   - Visuelle Anpassungsoptionen einbauen
 
-- ⏳ 🔐 Login-/Registrierungsbereich einbauen
-  - Nutzerkonten mit Session-Handling erstellen
-  - Registrierung mit E-Mail und Passwort
-  - Optional: Datenspeicherung pro Benutzer
+5. 🔐 Login/Registrierungs-System einrichten
+   - Benutzerkonten-Management
+   - Zugangskontrolle implementieren
 
 ### Mittelfristige Ziele
-- ⏳ Integration mit ATS (Applicant Tracking Systems)
-- ⏳ Export in verschiedene Formate (JSON, XML, DOCX)
-- ⏳ Batch-Verarbeitung mehrerer Dokumente
-- ⏳ Erweiterte Anonymisierungsoptionen
+6. 📊 ATS-Integration (Applicant Tracking Systems)
+7. 💾 Erweitertes Export-System (verschiedene Formate)
+8. 📚 Batch-Verarbeitung mehrerer Dokumente
+9. 🕶️ Erweiterte Anonymisierungsoptionen
 
 ### Langfristige Ziele
-- ⏳ Lokale KI-Modelle für vollständig offline Nutzung
-- ⏳ Vergleichsfunktion zwischen verschiedenen Profilen
-- ⏳ Enterprise-Features (Benutzerverwaltung, Berechtigungen, etc.)
+10. 🤖 Lokale KI-Modelle für Offline-Nutzung
+11. 🔄 Profilvergleichsfunktion
+12. 🏢 Enterprise-Features
+
+## Logische Umsetzungsreihenfolge
+
+Für eine effiziente Entwicklung empfehlen wir folgende Implementierungsreihenfolge:
+
+1. **Bugfixes abschließen** - Kritische Fehler beheben, um Stabilität zu gewährleisten
+   - PDF-Vorschau-Fehler (Priorität hoch)
+   - Verbesserte Fehlerbehandlung
+
+2. **PDF-Vorschau HTTPS-kompatibel machen** - Grundlegende Funktionalität für gehostete Version
+   - Sicherstellen, dass Vorschau auch auf Streamlit Cloud funktioniert
+
+3. **Profilbilder implementieren** - Verbessert UX mit überschaubarem Aufwand
+   - Upload und Integration in bestehende Templates
+
+4. **Template-System erweitern**
+   - Standard-Templates editierbar machen
+   - Eigene Templates ermöglichen
+
+5. **Benutzerverwaltung einführen** - Grundlage für erweitertes Datenmangement
+   - Login/Registrierung
+   - Datenspeicherung pro Nutzer
+
+6. **Fortgeschrittene Features entwickeln**
+   - Export-System
+   - Batch-Verarbeitung
+   - ATS-Integration
+
+7. **Enterprise-Erweiterungen**
+   - Lokale KI-Modelle
+   - Erweiterte Analyse-Tools
+   - Vergleichsfunktionen
+
+## Hinweise
+
+- Die Reihenfolge der Implementierung wurde basierend auf technischen Abhängigkeiten, Nutzeranforderungen und Entwicklungseffizienz festgelegt
+- Für jede Aufgabe sollte ein eigener Feature-Branch erstellt werden
+- Nach Abschluss einer Aufgabe sollte diese Übersicht aktualisiert werden
+- Bei der Implementierung ist Folgendes zu beachten:
+  - Rückwärtskompatibilität
+  - Ausreichende Testabdeckung
+  - Dokumentation neuer Features
 
 ## 📊 Projektmetriken
 
