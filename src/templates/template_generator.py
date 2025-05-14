@@ -282,11 +282,12 @@ class ProfileGenerator:
                 
                 doc.add_paragraph()  # Leerzeile
             
+            # Trennlinie zwischen Ausbildung und Weiterbildungen
+            doc.add_paragraph()
+            doc.add_paragraph("Weiterbildungen", style='Heading2')
+            
             # Weiterbildungen
             if profile_data.get("weiterbildungen"):
-                doc.add_paragraph("Fort- und Weiterbildungen", style='Heading2')
-                
-                # Füge Weiterbildungen hinzu
                 for training in profile_data.get("weiterbildungen", []):
                     # Tabelle für jede Weiterbildung
                     train_table = doc.add_table(rows=0, cols=2)
@@ -306,6 +307,8 @@ class ProfileGenerator:
                         row_cells[1].add_paragraph(training.get("abschluss", "")).italic = True
                     
                     doc.add_paragraph()  # Leerzeile
+            else:
+                doc.add_paragraph("Keine Weiterbildungen angegeben", style='Normal')
             
             # Erstelle Seitenumbruch vor Ansprechpartner-Seite
             doc.add_page_break()
@@ -818,9 +821,12 @@ class ProfileGenerator:
                 
                 # Ausbildung
                 elements.append(Spacer(1, 0.5*cm))
-                elements.append(Paragraph("Ausbildung", self.custom_styles['Heading2']))
+                # Trennlinie zwischen Berufserfahrung und Ausbildung
+                elements.append(HRFlowable(width="100%", thickness=1, lineCap='round', color=colors.lightgrey))
+                elements.append(Spacer(1, 0.5*cm))
+                elements.append(Paragraph("Ausbildung/ Weiterbildung", self.custom_styles['Heading2']))
                 
-                # Füge Ausbildung hinzu in ähnlichem Format wie Berufserfahrung
+                # Ausbildungen im gleichen Format wie Berufserfahrung darstellen
                 ausbildungen = profile_data.get('ausbildung', [])
                 if ausbildungen:
                     for ausbildung in ausbildungen:
@@ -832,13 +838,27 @@ class ProfileGenerator:
                             institution = ausbildung.get('institution', '')
                             abschluss = ausbildung.get('abschluss', '')
                             
-                            # Rechte Spalte Inhalte
-                            right_column_content = [
-                                Paragraph(institution, self.custom_styles['Company'])
-                            ]
+                            # Studienschwerpunkte
+                            schwerpunkte = ausbildung.get('schwerpunkte', '')
                             
+                            # Rechte Spalte Inhalte
+                            right_column_content = []
+                            
+                            # Institution/Abschluss formatieren
+                            if institution.startswith("Studium"):
+                                right_column_content.append(Paragraph(institution, self.custom_styles['Company']))
+                            else:
+                                right_column_content.append(Paragraph(f"Studium {institution}", self.custom_styles['Company']))
+                            
+                            if schwerpunkte:
+                                right_column_content.append(Paragraph(f"Studienschwerpunkte: {schwerpunkte}", self.custom_styles['Normal']))
                             if abschluss:
-                                right_column_content.append(Paragraph(abschluss, self.custom_styles['Position']))
+                                right_column_content.append(Paragraph(f"{abschluss}", self.custom_styles['Normal']))
+                            
+                            # Note 
+                            note = ausbildung.get('note', '')
+                            if note:
+                                right_column_content.append(Paragraph(f"Abschlussnote {note}", self.custom_styles['Normal']))
                             
                             # Erstelle zweispaltiges Layout mit mehr Platz für die rechte Spalte
                             data = [[Paragraph(zeitraum, self.custom_styles['Period']), right_column_content[0]]]
@@ -847,7 +867,7 @@ class ProfileGenerator:
                             for i in range(1, len(right_column_content)):
                                 data.append([Paragraph('', self.custom_styles['Normal']), right_column_content[i]])
                             
-                            # Tabelle mit definierter Breite
+                            # Tabelle mit definierter Breite (10% links, 75% rechts)
                             col_widths = [A4[0] * 0.15, A4[0] * 0.65]
                             
                             table = Table(data, colWidths=col_widths)
@@ -855,27 +875,30 @@ class ProfileGenerator:
                                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                                 ('ALIGN', (0, 0), (0, -1), 'LEFT'),
                                 ('ALIGN', (1, 0), (1, -1), 'LEFT'),
-                                ('LEFTPADDING', (1, 0), (1, -1), 2*cm),
+                                ('LEFTPADDING', (1, 0), (1, -1), 2*cm),  # Ca. 2cm Einrückung für bessere Lesbarkeit
                             ]))
                             
-                            # KeepTogether verhindert Seitenumbrüche mitten im Eintrag
+                            # Wir verpacken die Tabelle und den Spacer in KeepTogether, damit sie nicht über eine Seite verteilt werden
                             entry_elements = [table, Spacer(1, 0.3*cm)]
                             elements.append(KeepTogether(entry_elements))
                         except Exception as e:
                             print(f"Fehler bei der Verarbeitung einer Ausbildung: {str(e)}")
-                            # Fallback
+                            # Einfache Darstellung als Fallback
                             elements.append(Paragraph(f"{zeitraum} - {institution}", self.custom_styles['Normal']))
                             elements.append(Spacer(1, 0.3*cm))
                 else:
                     elements.append(Paragraph("Keine Ausbildung angegeben", self.custom_styles['Normal']))
                 
-                # Weiterbildungen
-                if profile_data.get("weiterbildungen"):
-                    elements.append(Spacer(1, 0.5*cm))
-                    elements.append(Paragraph("Fort- und Weiterbildungen", self.custom_styles['Heading2']))
-                    
-                    # Füge Weiterbildungen hinzu in ähnlichem Format wie Berufserfahrung
-                    weiterbildungen = profile_data.get('weiterbildungen', [])
+                # Trennlinie zwischen Ausbildung und Weiterbildungen
+                elements.append(Spacer(1, 0.5*cm))
+                elements.append(HRFlowable(width="100%", thickness=0.5, lineCap='round', color=colors.lightgrey, spaceBefore=0.3*cm, spaceAfter=0.3*cm))
+                
+                # Fort- und Weiterbildungen Überschrift
+                elements.append(Paragraph("Fort- und Weiterbildungen", self.custom_styles['Heading2']))
+                
+                # Weiterbildungen im gleichen Format wie Berufserfahrung darstellen
+                weiterbildungen = profile_data.get('weiterbildungen', [])
+                if weiterbildungen:
                     for weiterbildung in weiterbildungen:
                         try:
                             # Zeitraum
@@ -886,12 +909,17 @@ class ProfileGenerator:
                             abschluss = weiterbildung.get('abschluss', '')
                             
                             # Rechte Spalte Inhalte
-                            right_column_content = [
-                                Paragraph(bezeichnung, self.custom_styles['Company'])
-                            ]
+                            right_column_content = []
                             
+                            # Formatieren wie im Design
+                            if "zum" in bezeichnung or "zur" in bezeichnung:
+                                right_column_content.append(Paragraph(f"Fortbildung {bezeichnung}", self.custom_styles['Company']))
+                            else:
+                                right_column_content.append(Paragraph(f"Fortbildung zum {bezeichnung}", self.custom_styles['Company']))
+                            
+                            # Abschluss nur anzeigen, wenn nicht leer und nicht bereits in Bezeichnung enthalten
                             if abschluss and abschluss not in bezeichnung:
-                                right_column_content.append(Paragraph(abschluss, self.custom_styles['Position']))
+                                right_column_content.append(Paragraph(f"{abschluss}", self.custom_styles['Normal']))
                             
                             # Erstelle zweispaltiges Layout mit mehr Platz für die rechte Spalte
                             data = [[Paragraph(zeitraum, self.custom_styles['Period']), right_column_content[0]]]
@@ -900,7 +928,7 @@ class ProfileGenerator:
                             for i in range(1, len(right_column_content)):
                                 data.append([Paragraph('', self.custom_styles['Normal']), right_column_content[i]])
                             
-                            # Tabelle mit definierter Breite
+                            # Tabelle mit definierter Breite (10% links, 75% rechts)
                             col_widths = [A4[0] * 0.15, A4[0] * 0.65]
                             
                             table = Table(data, colWidths=col_widths)
@@ -908,17 +936,19 @@ class ProfileGenerator:
                                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                                 ('ALIGN', (0, 0), (0, -1), 'LEFT'),
                                 ('ALIGN', (1, 0), (1, -1), 'LEFT'),
-                                ('LEFTPADDING', (1, 0), (1, -1), 2*cm),
+                                ('LEFTPADDING', (1, 0), (1, -1), 2*cm),  # Ca. 2cm Einrückung für bessere Lesbarkeit
                             ]))
                             
-                            # KeepTogether verhindert Seitenumbrüche mitten im Eintrag
+                            # Wir verpacken die Tabelle und den Spacer in KeepTogether, damit sie nicht über eine Seite verteilt werden
                             entry_elements = [table, Spacer(1, 0.3*cm)]
                             elements.append(KeepTogether(entry_elements))
                         except Exception as e:
                             print(f"Fehler bei der Verarbeitung einer Weiterbildung: {str(e)}")
-                            # Fallback
+                            # Einfache Darstellung als Fallback
                             elements.append(Paragraph(f"{zeitraum} - {bezeichnung}", self.custom_styles['Normal']))
                             elements.append(Spacer(1, 0.3*cm))
+                else:
+                    elements.append(Paragraph("Keine Weiterbildungen angegeben", self.custom_styles['Normal']))
                 
                 # Footer mit GALDORA Kontaktinformationen für beide Templates
                 elements.append(Spacer(1, 1.5*cm))
@@ -1126,6 +1156,9 @@ class ProfileGenerator:
             
             # Ausbildung
             elements.append(Spacer(1, 0.5*cm))
+            # Trennlinie zwischen Berufserfahrung und Ausbildung
+            elements.append(HRFlowable(width="100%", thickness=1, lineCap='round', color=colors.lightgrey))
+            elements.append(Spacer(1, 0.5*cm))
             elements.append(Paragraph("Ausbildung/ Weiterbildung", self.custom_styles['Heading2']))
             
             # Ausbildungen im gleichen Format wie Berufserfahrung darstellen
@@ -1190,6 +1223,14 @@ class ProfileGenerator:
                         elements.append(Spacer(1, 0.3*cm))
             else:
                 elements.append(Paragraph("Keine Ausbildung angegeben", self.custom_styles['Normal']))
+            
+            # Trennlinie zwischen Ausbildung und Weiterbildungen
+            elements.append(Spacer(1, 0.5*cm))
+            elements.append(HRFlowable(width="100%", thickness=0.5, lineCap='round', color=colors.lightgrey, spaceBefore=0.3*cm, spaceAfter=0.3*cm))
+            elements.append(Spacer(1, 0.3*cm))
+            
+            # Fort- und Weiterbildungen Überschrift
+            elements.append(Paragraph("Fort- und Weiterbildungen", self.custom_styles['Heading2']))
             
             # Weiterbildungen im gleichen Format wie Berufserfahrung darstellen
             weiterbildungen = profile_data.get('weiterbildungen', [])
