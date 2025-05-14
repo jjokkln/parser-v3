@@ -49,32 +49,6 @@ def get_logo_as_base64():
         print(f"Error loading logo: {e}")
         return ""
 
-# Funktion zur Sortierung nach Zeitraum (für die chronologische Sortierung)
-def sort_by_time_period(items, reverse=False):
-    """
-    Sortiert eine Liste von Elementen nach dem 'zeitraum'-Feld.
-    
-    Args:
-        items: Liste von Dictionaries mit 'zeitraum'-Feld (Format 'MM/YYYY - MM/YYYY' oder 'MM/YYYY - heute')
-        reverse: Wenn True, wird in umgekehrter Reihenfolge sortiert (neueste zuerst)
-        
-    Returns:
-        Sortierte Liste von Elementen
-    """
-    def extract_year(time_period):
-        # Versuche, ein Jahr aus dem Zeitraum zu extrahieren
-        if not time_period:
-            return 0
-        
-        # Nehme das erste Jahr, das im String gefunden wird
-        years = re.findall(r'(\d{4})', time_period)
-        if years:
-            return int(years[0])
-        return 0
-    
-    # Sortiere die Liste nach dem extrahierten Jahr
-    return sorted(items, key=lambda x: extract_year(x.get('zeitraum', '')), reverse=reverse)
-
 # CSS für Farbverlaufshintergrund und weiße Schaltflächen
 custom_css = """
 <style>
@@ -692,15 +666,6 @@ def reset_session():
     st.session_state.profile_data = {}
     st.session_state.edited_data = {}
     st.session_state.preview_pdf = None
-    
-    # Drag & Drop Session-Variablen zurücksetzen
-    if 'berufserfahrung_items' in st.session_state:
-        del st.session_state.berufserfahrung_items
-    if 'ausbildung_items' in st.session_state:
-        del st.session_state.ausbildung_items
-    if 'weiterbildung_items' in st.session_state:
-        del st.session_state.weiterbildung_items
-    
     # Temporäre Dateien aufräumen
     if 'temp_files' in st.session_state:
         for temp_file in st.session_state.temp_files:
@@ -1079,51 +1044,10 @@ if st.session_state.step == 1:
             # Berufserfahrung
             st.markdown("### Berufserfahrung")
             
-            # Sortieroptionen für Berufserfahrung
-            exp_sort_col1, exp_sort_col2 = st.columns([3, 1])
-            with exp_sort_col1:
-                st.markdown("**Sortierung der Berufserfahrungen:**")
-            with exp_sort_col2:
-                exp_sort_order = st.selectbox(
-                    "Reihenfolge",
-                    options=["Neueste zuerst", "Älteste zuerst"],
-                    index=0,
-                    key="exp_sort_order"
-                )
-            
             # Liste für editierte Berufserfahrungen
             edited_experience = []
             
-            # Sortiere Berufserfahrungen nach Zeitraum
-            berufserfahrung = profile_data.get("berufserfahrung", [])
-            if exp_sort_order == "Neueste zuerst":
-                berufserfahrung = sort_by_time_period(berufserfahrung, reverse=True)
-            else:
-                berufserfahrung = sort_by_time_period(berufserfahrung, reverse=False)
-            
-            # Berufserfahrungen nach Sortierung in der Session speichern, wenn noch nicht vorhanden
-            if 'berufserfahrung_items' not in st.session_state:
-                st.session_state.berufserfahrung_items = berufserfahrung
-            else:
-                # Nur aktualisieren, wenn Sortierung geändert wurde
-                if exp_sort_order != st.session_state.get('exp_sort_order_last', ''):
-                    st.session_state.berufserfahrung_items = berufserfahrung
-                    st.session_state.exp_sort_order_last = exp_sort_order
-            
-            # Funktion zum Verschieben eines Elements nach oben
-            def move_exp_up(index):
-                if index > 0:
-                    st.session_state.berufserfahrung_items[index], st.session_state.berufserfahrung_items[index-1] = st.session_state.berufserfahrung_items[index-1], st.session_state.berufserfahrung_items[index]
-                    st.rerun()
-            
-            # Funktion zum Verschieben eines Elements nach unten
-            def move_exp_down(index):
-                if index < len(st.session_state.berufserfahrung_items) - 1:
-                    st.session_state.berufserfahrung_items[index], st.session_state.berufserfahrung_items[index+1] = st.session_state.berufserfahrung_items[index+1], st.session_state.berufserfahrung_items[index]
-                    st.rerun()
-            
-            # Berufserfahrungen aus der Session verwenden
-            for idx, erfahrung in enumerate(st.session_state.berufserfahrung_items):
+            for idx, erfahrung in enumerate(profile_data.get("berufserfahrung", [])):
                 with st.expander(f"{erfahrung.get('zeitraum', 'Neue Erfahrung')}: {erfahrung.get('position', '')} bei {erfahrung.get('unternehmen', '')}", expanded=False):
                     exp_data = {}
                     col1, col2 = st.columns(2)
@@ -1143,16 +1067,6 @@ if st.session_state.step == 1:
                     )
                     # Aufgaben zurück in eine Liste konvertieren
                     exp_data["aufgaben"] = [task.strip() for task in new_aufgaben.split("\n") if task.strip()]
-                    
-                    # Steuerelemente zum Ändern der Reihenfolge
-                    st.markdown("##### Position anpassen")
-                    cols = st.columns([1, 1, 3])
-                    with cols[0]:
-                        if st.button("↑", key=f"exp_up_{idx}", help="Nach oben verschieben", use_container_width=True):
-                            move_exp_up(idx)
-                    with cols[1]:
-                        if st.button("↓", key=f"exp_down_{idx}", help="Nach unten verschieben", use_container_width=True):
-                            move_exp_down(idx)
                     
                     # Option zum Löschen dieser Berufserfahrung
                     include = st.checkbox(f"Diese Berufserfahrung einbeziehen", value=True, key=f"exp_demo_{idx}")
@@ -1183,72 +1097,21 @@ if st.session_state.step == 1:
             # Ausbildung
             st.markdown("### Ausbildung")
             
-            # Sortieroptionen für Ausbildung
-            edu_sort_col1, edu_sort_col2 = st.columns([3, 1])
-            with edu_sort_col1:
-                st.markdown("**Sortierung der Ausbildungen:**")
-            with edu_sort_col2:
-                edu_sort_order = st.selectbox(
-                    "Reihenfolge",
-                    options=["Neueste zuerst", "Älteste zuerst"],
-                    index=0,
-                    key="edu_sort_order"
-                )
-            
             # Liste für editierte Ausbildungen
             edited_education = []
             
-            # Sortiere Ausbildungen nach Zeitraum
-            ausbildung = profile_data.get("ausbildung", [])
-            if edu_sort_order == "Neueste zuerst":
-                ausbildung = sort_by_time_period(ausbildung, reverse=True)
-            else:
-                ausbildung = sort_by_time_period(ausbildung, reverse=False)
-            
-            # Ausbildungen nach Sortierung in der Session speichern, wenn noch nicht vorhanden
-            if 'ausbildung_items' not in st.session_state:
-                st.session_state.ausbildung_items = ausbildung
-            else:
-                # Nur aktualisieren, wenn Sortierung geändert wurde
-                if edu_sort_order != st.session_state.get('edu_sort_order_last', ''):
-                    st.session_state.ausbildung_items = ausbildung
-                    st.session_state.edu_sort_order_last = edu_sort_order
-            
-            # Funktion zum Verschieben eines Elements nach oben
-            def move_edu_up(index):
-                if index > 0:
-                    st.session_state.ausbildung_items[index], st.session_state.ausbildung_items[index-1] = st.session_state.ausbildung_items[index-1], st.session_state.ausbildung_items[index]
-                    st.rerun()
-            
-            # Funktion zum Verschieben eines Elements nach unten
-            def move_edu_down(index):
-                if index < len(st.session_state.ausbildung_items) - 1:
-                    st.session_state.ausbildung_items[index], st.session_state.ausbildung_items[index+1] = st.session_state.ausbildung_items[index+1], st.session_state.ausbildung_items[index]
-                    st.rerun()
-            
-            # Ausbildungen aus der Session verwenden
-            for idx, ausbildung_item in enumerate(st.session_state.ausbildung_items):
-                with st.expander(f"{ausbildung_item.get('zeitraum', 'Neue Ausbildung')}: {ausbildung_item.get('abschluss', '')} - {ausbildung_item.get('institution', '')}", expanded=False):
+            for idx, ausbildung in enumerate(profile_data.get("ausbildung", [])):
+                with st.expander(f"{ausbildung.get('zeitraum', 'Neue Ausbildung')}: {ausbildung.get('abschluss', '')} - {ausbildung.get('institution', '')}", expanded=False):
                     edu_data = {}
                     col1, col2 = st.columns(2)
                     with col1:
-                        edu_data["zeitraum"] = st.text_input(f"Zeitraum (Ausbildung) #{idx+1}", value=ausbildung_item.get("zeitraum", ""), key=f"edu_zeit_demo_{idx}")
-                        edu_data["institution"] = st.text_input(f"Institution #{idx+1}", value=ausbildung_item.get("institution", ""), key=f"institution_demo_{idx}")
+                        edu_data["zeitraum"] = st.text_input(f"Zeitraum (Ausbildung) #{idx+1}", value=ausbildung.get("zeitraum", ""), key=f"edu_zeit_demo_{idx}")
+                        edu_data["institution"] = st.text_input(f"Institution #{idx+1}", value=ausbildung.get("institution", ""), key=f"institution_demo_{idx}")
                     with col2:
-                        edu_data["abschluss"] = st.text_input(f"Abschluss #{idx+1}", value=ausbildung_item.get("abschluss", ""), key=f"abschluss_demo_{idx}")
-                        edu_data["note"] = st.text_input(f"Note #{idx+1}", value=ausbildung_item.get("note", ""), key=f"note_demo_{idx}")
+                        edu_data["abschluss"] = st.text_input(f"Abschluss #{idx+1}", value=ausbildung.get("abschluss", ""), key=f"abschluss_demo_{idx}")
+                        edu_data["note"] = st.text_input(f"Note #{idx+1}", value=ausbildung.get("note", ""), key=f"note_demo_{idx}")
                     
-                    edu_data["schwerpunkte"] = st.text_input(f"Studienschwerpunkte #{idx+1}", value=ausbildung_item.get("schwerpunkte", ""), key=f"schwerpunkte_demo_{idx}")
-                    
-                    # Steuerelemente zum Ändern der Reihenfolge
-                    st.markdown("##### Position anpassen")
-                    cols = st.columns([1, 1, 3])
-                    with cols[0]:
-                        if st.button("↑", key=f"edu_up_{idx}", help="Nach oben verschieben", use_container_width=True):
-                            move_edu_up(idx)
-                    with cols[1]:
-                        if st.button("↓", key=f"edu_down_{idx}", help="Nach unten verschieben", use_container_width=True):
-                            move_edu_down(idx)
+                    edu_data["schwerpunkte"] = st.text_input(f"Studienschwerpunkte #{idx+1}", value=ausbildung.get("schwerpunkte", ""), key=f"schwerpunkte_demo_{idx}")
                     
                     # Option zum Löschen dieser Ausbildung
                     include = st.checkbox(f"Diese Ausbildung einbeziehen", value=True, key=f"edu_demo_{idx}")
@@ -1275,51 +1138,10 @@ if st.session_state.step == 1:
             # Weiterbildung
             st.markdown("### Weiterbildung")
             
-            # Sortieroptionen für Weiterbildung
-            training_sort_col1, training_sort_col2 = st.columns([3, 1])
-            with training_sort_col1:
-                st.markdown("**Sortierung der Weiterbildungen:**")
-            with training_sort_col2:
-                training_sort_order = st.selectbox(
-                    "Reihenfolge",
-                    options=["Neueste zuerst", "Älteste zuerst"],
-                    index=0,
-                    key="training_sort_order"
-                )
-            
             # Liste für editierte Weiterbildungen
             edited_training = []
             
-            # Sortiere Weiterbildungen nach Zeitraum
-            weiterbildungen = profile_data.get("weiterbildungen", [])
-            if training_sort_order == "Neueste zuerst":
-                weiterbildungen = sort_by_time_period(weiterbildungen, reverse=True)
-            else:
-                weiterbildungen = sort_by_time_period(weiterbildungen, reverse=False)
-            
-            # Weiterbildungen nach Sortierung in der Session speichern, wenn noch nicht vorhanden
-            if 'weiterbildung_items' not in st.session_state:
-                st.session_state.weiterbildung_items = weiterbildungen
-            else:
-                # Nur aktualisieren, wenn Sortierung geändert wurde
-                if training_sort_order != st.session_state.get('training_sort_order_last', ''):
-                    st.session_state.weiterbildung_items = weiterbildungen
-                    st.session_state.training_sort_order_last = training_sort_order
-            
-            # Funktion zum Verschieben eines Elements nach oben
-            def move_training_up(index):
-                if index > 0:
-                    st.session_state.weiterbildung_items[index], st.session_state.weiterbildung_items[index-1] = st.session_state.weiterbildung_items[index-1], st.session_state.weiterbildung_items[index]
-                    st.rerun()
-            
-            # Funktion zum Verschieben eines Elements nach unten
-            def move_training_down(index):
-                if index < len(st.session_state.weiterbildung_items) - 1:
-                    st.session_state.weiterbildung_items[index], st.session_state.weiterbildung_items[index+1] = st.session_state.weiterbildung_items[index+1], st.session_state.weiterbildung_items[index]
-                    st.rerun()
-            
-            # Weiterbildungen aus der Session verwenden
-            for idx, weiterbildung in enumerate(st.session_state.weiterbildung_items):
+            for idx, weiterbildung in enumerate(profile_data.get("weiterbildungen", [])):
                 with st.expander(f"{weiterbildung.get('zeitraum', 'Neue Weiterbildung')}: {weiterbildung.get('bezeichnung', '')}", expanded=False):
                     training_data = {}
                     col1, col2 = st.columns(2)
@@ -1329,16 +1151,6 @@ if st.session_state.step == 1:
                         training_data["bezeichnung"] = st.text_input(f"Bezeichnung #{idx+1}", value=weiterbildung.get("bezeichnung", ""), key=f"bezeichnung_demo_{idx}")
                     
                     training_data["abschluss"] = st.text_input(f"Abschluss (Weiterbildung) #{idx+1}", value=weiterbildung.get("abschluss", ""), key=f"weiter_abschluss_demo_{idx}")
-                    
-                    # Steuerelemente zum Ändern der Reihenfolge
-                    st.markdown("##### Position anpassen")
-                    cols = st.columns([1, 1, 3])
-                    with cols[0]:
-                        if st.button("↑", key=f"training_up_{idx}", help="Nach oben verschieben", use_container_width=True):
-                            move_training_up(idx)
-                    with cols[1]:
-                        if st.button("↓", key=f"training_down_{idx}", help="Nach unten verschieben", use_container_width=True):
-                            move_training_down(idx)
                     
                     # Option zum Löschen dieser Weiterbildung
                     include = st.checkbox(f"Diese Weiterbildung einbeziehen", value=True, key=f"train_demo_{idx}")
@@ -1714,7 +1526,7 @@ if st.session_state.step == 1:
                                     st.session_state.profile_image_path = img_path
                                     st.session_state.temp_files.append(img_path)
                                     st.session_state.profile_image = profile_image
-                            
+                        
                         # Führerschein und Wunschgehalt
                         col1, col2 = st.columns(2)
                         with col1:
@@ -1810,59 +1622,18 @@ if st.session_state.step == 1:
                         # Berufserfahrung
                         st.markdown("### Berufserfahrung")
                         
-                        # Sortieroptionen für Berufserfahrung
-                        exp_sort_col1, exp_sort_col2 = st.columns([3, 1])
-                        with exp_sort_col1:
-                            st.markdown("**Sortierung der Berufserfahrungen:**")
-                        with exp_sort_col2:
-                            exp_sort_order = st.selectbox(
-                                "Reihenfolge",
-                                options=["Neueste zuerst", "Älteste zuerst"],
-                                index=0,
-                                key="exp_sort_order"
-                            )
-                        
                         # Liste für editierte Berufserfahrungen
                         edited_experience = []
                         
-                        # Sortiere Berufserfahrungen nach Zeitraum
-                        berufserfahrung = profile_data.get("berufserfahrung", [])
-                        if exp_sort_order == "Neueste zuerst":
-                            berufserfahrung = sort_by_time_period(berufserfahrung, reverse=True)
-                        else:
-                            berufserfahrung = sort_by_time_period(berufserfahrung, reverse=False)
-                        
-                        # Berufserfahrungen nach Sortierung in der Session speichern, wenn noch nicht vorhanden
-                        if 'berufserfahrung_items' not in st.session_state:
-                            st.session_state.berufserfahrung_items = berufserfahrung
-                        else:
-                            # Nur aktualisieren, wenn Sortierung geändert wurde
-                            if exp_sort_order != st.session_state.get('exp_sort_order_last', ''):
-                                st.session_state.berufserfahrung_items = berufserfahrung
-                                st.session_state.exp_sort_order_last = exp_sort_order
-                        
-                        # Funktion zum Verschieben eines Elements nach oben
-                        def move_exp_up(index):
-                            if index > 0:
-                                st.session_state.berufserfahrung_items[index], st.session_state.berufserfahrung_items[index-1] = st.session_state.berufserfahrung_items[index-1], st.session_state.berufserfahrung_items[index]
-                                st.rerun()
-                        
-                        # Funktion zum Verschieben eines Elements nach unten
-                        def move_exp_down(index):
-                            if index < len(st.session_state.berufserfahrung_items) - 1:
-                                st.session_state.berufserfahrung_items[index], st.session_state.berufserfahrung_items[index+1] = st.session_state.berufserfahrung_items[index+1], st.session_state.berufserfahrung_items[index]
-                                st.rerun()
-                        
-                        # Berufserfahrungen aus der Session verwenden
-                        for idx, erfahrung in enumerate(st.session_state.berufserfahrung_items):
+                        for idx, erfahrung in enumerate(profile_data.get("berufserfahrung", [])):
                             with st.expander(f"{erfahrung.get('zeitraum', 'Neue Erfahrung')}: {erfahrung.get('position', '')} bei {erfahrung.get('unternehmen', '')}", expanded=False):
                                 exp_data = {}
                                 col1, col2 = st.columns(2)
                                 with col1:
-                                    exp_data["zeitraum"] = st.text_input(f"Zeitraum #{idx+1}", value=erfahrung.get("zeitraum", ""), key=f"zeit_demo_{idx}")
-                                    exp_data["unternehmen"] = st.text_input(f"Unternehmen #{idx+1}", value=erfahrung.get("unternehmen", ""), key=f"unternehmen_demo_{idx}")
+                                    exp_data["zeitraum"] = st.text_input(f"Zeitraum #{idx+1}", value=erfahrung.get("zeitraum", ""))
+                                    exp_data["unternehmen"] = st.text_input(f"Unternehmen #{idx+1}", value=erfahrung.get("unternehmen", ""))
                                 with col2:
-                                    exp_data["position"] = st.text_input(f"Position #{idx+1}", value=erfahrung.get("position", ""), key=f"position_demo_{idx}")
+                                    exp_data["position"] = st.text_input(f"Position #{idx+1}", value=erfahrung.get("position", ""))
                                 
                                 # Aufgaben als Textarea mit einer Aufgabe pro Zeile
                                 aufgaben_text = "\n".join(erfahrung.get("aufgaben", []))
@@ -1873,16 +1644,6 @@ if st.session_state.step == 1:
                                 )
                                 # Aufgaben zurück in eine Liste konvertieren
                                 exp_data["aufgaben"] = [task.strip() for task in new_aufgaben.split("\n") if task.strip()]
-                                
-                                # Steuerelemente zum Ändern der Reihenfolge
-                                st.markdown("##### Position anpassen")
-                                cols = st.columns([1, 1, 3])
-                                with cols[0]:
-                                    if st.button("↑", key=f"exp_up_{idx}", help="Nach oben verschieben", use_container_width=True):
-                                        move_exp_up(idx)
-                                with cols[1]:
-                                    if st.button("↓", key=f"exp_down_{idx}", help="Nach unten verschieben", use_container_width=True):
-                                        move_exp_down(idx)
                                 
                                 # Option zum Löschen dieser Berufserfahrung
                                 include = st.checkbox(f"Diese Berufserfahrung einbeziehen", value=True, key=f"exp_{idx}")
@@ -1912,72 +1673,21 @@ if st.session_state.step == 1:
                         # Ausbildung
                         st.markdown("### Ausbildung")
                         
-                        # Sortieroptionen für Ausbildung
-                        edu_sort_col1, edu_sort_col2 = st.columns([3, 1])
-                        with edu_sort_col1:
-                            st.markdown("**Sortierung der Ausbildungen:**")
-                        with edu_sort_col2:
-                            edu_sort_order = st.selectbox(
-                                "Reihenfolge",
-                                options=["Neueste zuerst", "Älteste zuerst"],
-                                index=0,
-                                key="edu_sort_order"
-                            )
-                        
                         # Liste für editierte Ausbildungen
                         edited_education = []
                         
-                        # Sortiere Ausbildungen nach Zeitraum
-                        ausbildung = profile_data.get("ausbildung", [])
-                        if edu_sort_order == "Neueste zuerst":
-                            ausbildung = sort_by_time_period(ausbildung, reverse=True)
-                        else:
-                            ausbildung = sort_by_time_period(ausbildung, reverse=False)
-                        
-                        # Ausbildungen nach Sortierung in der Session speichern, wenn noch nicht vorhanden
-                        if 'ausbildung_items' not in st.session_state:
-                            st.session_state.ausbildung_items = ausbildung
-                        else:
-                            # Nur aktualisieren, wenn Sortierung geändert wurde
-                            if edu_sort_order != st.session_state.get('edu_sort_order_last', ''):
-                                st.session_state.ausbildung_items = ausbildung
-                                st.session_state.edu_sort_order_last = edu_sort_order
-                        
-                        # Funktion zum Verschieben eines Elements nach oben
-                        def move_edu_up(index):
-                            if index > 0:
-                                st.session_state.ausbildung_items[index], st.session_state.ausbildung_items[index-1] = st.session_state.ausbildung_items[index-1], st.session_state.ausbildung_items[index]
-                                st.rerun()
-                        
-                        # Funktion zum Verschieben eines Elements nach unten
-                        def move_edu_down(index):
-                            if index < len(st.session_state.ausbildung_items) - 1:
-                                st.session_state.ausbildung_items[index], st.session_state.ausbildung_items[index+1] = st.session_state.ausbildung_items[index+1], st.session_state.ausbildung_items[index]
-                                st.rerun()
-                        
-                        # Ausbildungen aus der Session verwenden
-                        for idx, ausbildung_item in enumerate(st.session_state.ausbildung_items):
-                            with st.expander(f"{ausbildung_item.get('zeitraum', 'Neue Ausbildung')}: {ausbildung_item.get('abschluss', '')} - {ausbildung_item.get('institution', '')}", expanded=False):
+                        for idx, ausbildung in enumerate(profile_data.get("ausbildung", [])):
+                            with st.expander(f"{ausbildung.get('zeitraum', 'Neue Ausbildung')}: {ausbildung.get('abschluss', '')} - {ausbildung.get('institution', '')}", expanded=False):
                                 edu_data = {}
                                 col1, col2 = st.columns(2)
                                 with col1:
-                                    edu_data["zeitraum"] = st.text_input(f"Zeitraum (Ausbildung) #{idx+1}", value=ausbildung_item.get("zeitraum", ""), key=f"edu_zeit_demo_{idx}")
-                                    edu_data["institution"] = st.text_input(f"Institution #{idx+1}", value=ausbildung_item.get("institution", ""), key=f"institution_demo_{idx}")
+                                    edu_data["zeitraum"] = st.text_input(f"Zeitraum (Ausbildung) #{idx+1}", value=ausbildung.get("zeitraum", ""))
+                                    edu_data["institution"] = st.text_input(f"Institution #{idx+1}", value=ausbildung.get("institution", ""))
                                 with col2:
-                                    edu_data["abschluss"] = st.text_input(f"Abschluss #{idx+1}", value=ausbildung_item.get("abschluss", ""), key=f"abschluss_demo_{idx}")
-                                    edu_data["note"] = st.text_input(f"Note #{idx+1}", value=ausbildung_item.get("note", ""), key=f"note_demo_{idx}")
+                                    edu_data["abschluss"] = st.text_input(f"Abschluss #{idx+1}", value=ausbildung.get("abschluss", ""))
+                                    edu_data["note"] = st.text_input(f"Note #{idx+1}", value=ausbildung.get("note", ""))
                                 
-                                edu_data["schwerpunkte"] = st.text_input(f"Studienschwerpunkte #{idx+1}", value=ausbildung_item.get("schwerpunkte", ""), key=f"schwerpunkte_demo_{idx}")
-                                
-                                # Steuerelemente zum Ändern der Reihenfolge
-                                st.markdown("##### Position anpassen")
-                                cols = st.columns([1, 1, 3])
-                                with cols[0]:
-                                    if st.button("↑", key=f"edu_up_{idx}", help="Nach oben verschieben", use_container_width=True):
-                                        move_edu_up(idx)
-                                with cols[1]:
-                                    if st.button("↓", key=f"edu_down_{idx}", help="Nach unten verschieben", use_container_width=True):
-                                        move_edu_down(idx)
+                                edu_data["schwerpunkte"] = st.text_input(f"Studienschwerpunkte #{idx+1}", value=ausbildung.get("schwerpunkte", ""))
                                 
                                 # Option zum Löschen dieser Ausbildung
                                 include = st.checkbox(f"Diese Ausbildung einbeziehen", value=True, key=f"edu_{idx}")
@@ -2004,70 +1714,19 @@ if st.session_state.step == 1:
                         # Weiterbildung
                         st.markdown("### Weiterbildung")
                         
-                        # Sortieroptionen für Weiterbildung
-                        training_sort_col1, training_sort_col2 = st.columns([3, 1])
-                        with training_sort_col1:
-                            st.markdown("**Sortierung der Weiterbildungen:**")
-                        with training_sort_col2:
-                            training_sort_order = st.selectbox(
-                                "Reihenfolge",
-                                options=["Neueste zuerst", "Älteste zuerst"],
-                                index=0,
-                                key="training_sort_order"
-                            )
-                        
                         # Liste für editierte Weiterbildungen
                         edited_training = []
                         
-                        # Sortiere Weiterbildungen nach Zeitraum
-                        weiterbildungen = profile_data.get("weiterbildungen", [])
-                        if training_sort_order == "Neueste zuerst":
-                            weiterbildungen = sort_by_time_period(weiterbildungen, reverse=True)
-                        else:
-                            weiterbildungen = sort_by_time_period(weiterbildungen, reverse=False)
-                        
-                        # Weiterbildungen nach Sortierung in der Session speichern, wenn noch nicht vorhanden
-                        if 'weiterbildung_items' not in st.session_state:
-                            st.session_state.weiterbildung_items = weiterbildungen
-                        else:
-                            # Nur aktualisieren, wenn Sortierung geändert wurde
-                            if training_sort_order != st.session_state.get('training_sort_order_last', ''):
-                                st.session_state.weiterbildung_items = weiterbildungen
-                                st.session_state.training_sort_order_last = training_sort_order
-                        
-                        # Funktion zum Verschieben eines Elements nach oben
-                        def move_training_up(index):
-                            if index > 0:
-                                st.session_state.weiterbildung_items[index], st.session_state.weiterbildung_items[index-1] = st.session_state.weiterbildung_items[index-1], st.session_state.weiterbildung_items[index]
-                                st.rerun()
-                        
-                        # Funktion zum Verschieben eines Elements nach unten
-                        def move_training_down(index):
-                            if index < len(st.session_state.weiterbildung_items) - 1:
-                                st.session_state.weiterbildung_items[index], st.session_state.weiterbildung_items[index+1] = st.session_state.weiterbildung_items[index+1], st.session_state.weiterbildung_items[index]
-                                st.rerun()
-                        
-                        # Weiterbildungen aus der Session verwenden
-                        for idx, weiterbildung in enumerate(st.session_state.weiterbildung_items):
+                        for idx, weiterbildung in enumerate(profile_data.get("weiterbildungen", [])):
                             with st.expander(f"{weiterbildung.get('zeitraum', 'Neue Weiterbildung')}: {weiterbildung.get('bezeichnung', '')}", expanded=False):
                                 training_data = {}
                                 col1, col2 = st.columns(2)
                                 with col1:
-                                    training_data["zeitraum"] = st.text_input(f"Zeitraum (Weiterbildung) #{idx+1}", value=weiterbildung.get("zeitraum", ""), key=f"weiter_zeit_demo_{idx}")
+                                    training_data["zeitraum"] = st.text_input(f"Zeitraum (Weiterbildung) #{idx+1}", value=weiterbildung.get("zeitraum", ""))
                                 with col2:
-                                    training_data["bezeichnung"] = st.text_input(f"Bezeichnung #{idx+1}", value=weiterbildung.get("bezeichnung", ""), key=f"bezeichnung_demo_{idx}")
+                                    training_data["bezeichnung"] = st.text_input(f"Bezeichnung #{idx+1}", value=weiterbildung.get("bezeichnung", ""))
                                     
                                 training_data["abschluss"] = st.text_input(f"Abschluss (Weiterbildung) #{idx+1}", value=weiterbildung.get("abschluss", ""))
-                                
-                                # Steuerelemente zum Ändern der Reihenfolge
-                                st.markdown("##### Position anpassen")
-                                cols = st.columns([1, 1, 3])
-                                with cols[0]:
-                                    if st.button("↑", key=f"training_up_{idx}", help="Nach oben verschieben", use_container_width=True):
-                                        move_training_up(idx)
-                                with cols[1]:
-                                    if st.button("↓", key=f"training_down_{idx}", help="Nach unten verschieben", use_container_width=True):
-                                        move_training_down(idx)
                                 
                                 # Option zum Löschen dieser Weiterbildung
                                 include = st.checkbox(f"Diese Weiterbildung einbeziehen", value=True, key=f"train_{idx}")

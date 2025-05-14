@@ -185,10 +185,43 @@ Die Anwendung besteht aus mehreren Modulen:
 5. Optional: Anonymisieren der persönlichen Daten aktivieren
 6. Profil generieren und herunterladen
 
-## Aktuelle Version (v3)
+## Aktuelle Version (v5)
 
-Die aktuelle Version (v3) enthält folgende Verbesserungen:
+Die aktuelle Version (v5) enthält folgende Verbesserungen:
 
+- **Modernisierte Streamlit-API-Nutzung**:
+  - Ersetzung der veralteten `st.experimental_rerun()` durch `st.rerun()`
+  - Verbesserte Kompatibilität mit aktuellen Streamlit-Versionen
+  - Behebung des Fehlers "Module Streamlit Has No Attribute Experimental Rerun"
+
+- **Geschlechtsspezifische Anrede**:
+  - Korrekte Anrede für weibliche Ansprechpartner
+  - Spezielle Anpassung für Melike Demirkol ("Frau Demirkol" statt "Herr Demirkol")
+  - Implementierung in beiden Ausgabeformaten (PDF und DOCX)
+
+- **Verbesserte Drag & Drop-Funktionalität**: 
+  - Manuelle Neuordnung von Berufserfahrungen, Ausbildungen und Weiterbildungen
+  - Intuitive Benutzeroberfläche mit Auf/Ab-Pfeilen (↑/↓) zur Änderung der Reihenfolge
+  - Session-State-Management zur Speicherung der benutzerdefinierten Reihenfolge
+  - Intelligente Integration mit der bestehenden chronologischen Sortierung
+  - Benutzer können zwischen automatischer und manueller Sortierung wechseln
+
+- **Optimiertes PDF-Layout**:
+  - GALDORA-Kontaktdaten als echte Fußzeile auf jeder Seite statt als Teil des Dokumentenkorpus
+  - Verhinderung von Einträgen, die über Seitenumbrüche verteilt werden
+  - Verwendung von ReportLab's `KeepTogether` für zusammenhängende Inhaltsblöcke
+  - Jeder Eintrag für Berufserfahrung, Ausbildung und Weiterbildung wird als untrennbare Einheit behandelt
+  - Integration von Profilbildern in die klassische Vorlage rechts neben dem Logo
+  - Automatische Anpassung des Seitenverhältnisses und der Größe von Profilbildern
+
+- **Technische Fehlerbehebungen**:
+  - Bereinigung doppelter Import-Anweisungen im Template-Generator
+  - Entfernung einer ungültigen Konfiguration in der Streamlit config.toml
+  - Erstellung des fehlenden static-Ordners für die Streamlit-Anwendung
+  - Verbesserte Code-Organisation und Wartbarkeit
+  - Behebung des kritischen Fehlers "name 'doc' is not defined" im Template-Generator
+  - Vereinheitlichung der Tabellenstruktur für alle Eintragstypen
+  
 - **HTTPS-Kompatibilität**: Bilder werden sowohl lokal als auch auf HTTPS-Servern korrekt angezeigt
 - **Automatische Bildverwaltung**: Bilder werden automatisch in das static-Verzeichnis kopiert
 - **Verbesserte Profilvorlagen**: 
@@ -205,12 +238,13 @@ Die aktuelle Version (v3) enthält folgende Verbesserungen:
   - Speichern von bevorzugten Templates für zukünftige Verwendung
   - Eindeutige Schlüssel für Checkbox-Widgets zur Vermeidung von Konflikten
 
-## Bekannte Probleme in v3
+## Bekannte Probleme in v4
 
 - Fehler bei der PDF-Vorschau: In Schritt 3 kann es zu einem Fehler kommen, wenn `st.session_state.preview_pdf` den Wert `None` hat
 - Der Fehler tritt auf in der Funktion `display_pdf()` in Zeile 48 der app.py
 - Fehlermeldung: `TypeError: expected str, bytes or os.PathLike object, not NoneType`
 - Eine Überprüfung auf `None` sollte implementiert werden, bevor versucht wird, die Datei zu öffnen
+- Die Drag & Drop-Funktionalität setzt auf Pfeiltasten statt echter Drag & Drop-Interaktion mit der Maus
 
 ## Aktuelle Grenzen und zukünftige Erweiterungen
 
@@ -219,6 +253,8 @@ Die aktuelle Version (v3) enthält folgende Verbesserungen:
 - Verbesserung der KI-Extraktion durch Feintuning geplant
 - Integration mit ATS (Applicant Tracking Systems) möglich
 - Behebung des PDF-Vorschau-Fehlers für die nächste Version geplant
+- Implementierung echter Drag & Drop-Funktionalität mit Maus-/Touch-Gesten
+- Speichern der bevorzugten Reihenfolge in den Benutzereinstellungen
 
 ## Datenschutz und Sicherheit
 

@@ -8,6 +8,7 @@ font = "sans serif"
 [server]
 enableCORS = false
 enableXsrfProtection = false
+enableStaticServing = true
 
 [browser]
 gatherUsageStats = false
@@ -15,5 +16,3 @@ gatherUsageStats = false
 [ui]
 hideTopBar = false
 
-[pages]
-01_Settings = "⚙️ Einstellungen" 
