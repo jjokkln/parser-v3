@@ -900,10 +900,8 @@ class ProfileGenerator:
                             right_column_content = []
                             
                             # Institution/Abschluss formatieren
-                            if institution.startswith("Studium"):
-                                right_column_content.append(Paragraph(institution, self.custom_styles['Company']))
-                            else:
-                                right_column_content.append(Paragraph(f"Studium {institution}", self.custom_styles['Company']))
+                            # Nicht automatisch "Studium" hinzufügen, da es sich auch um andere Ausbildungsformen handeln kann
+                            right_column_content.append(Paragraph(institution, self.custom_styles['Company']))
                             
                             if schwerpunkte:
                                 right_column_content.append(Paragraph(f"Studienschwerpunkte: {schwerpunkte}", self.custom_styles['Normal']))
@@ -1269,10 +1267,8 @@ class ProfileGenerator:
                         right_column_content = []
                         
                         # Institution/Abschluss formatieren
-                        if institution.startswith("Studium"):
-                            right_column_content.append(Paragraph(institution, self.custom_styles['Company']))
-                        else:
-                            right_column_content.append(Paragraph(f"Studium {institution}", self.custom_styles['Company']))
+                        # Nicht automatisch "Studium" hinzufügen, da es sich auch um andere Ausbildungsformen handeln kann
+                        right_column_content.append(Paragraph(institution, self.custom_styles['Company']))
                         
                         if schwerpunkte:
                             right_column_content.append(Paragraph(f"Studienschwerpunkte: {schwerpunkte}", self.custom_styles['Normal']))
