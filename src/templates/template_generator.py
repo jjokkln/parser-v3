@@ -1019,7 +1019,15 @@ class ProfileGenerator:
                 personal_data = profile_data.get('persönliche_daten', {})
                 
                 # GALDORA Logo aus dem richtigen Ordner einbinden
-                logo_path = get_image_path('Galdoralogo.png', use_static=use_https_compatible)
+                # Versuche beide Varianten des Dateinamens (mit großem und kleinem G)
+                logo_path = get_image_path('galdoralogo.png', use_static=use_https_compatible)
+                
+                # Falls nicht gefunden, versuche alternative Schreibweise
+                if not logo_path or not os.path.exists(logo_path):
+                    logo_path = get_image_path('Galdoralogo.png', use_static=use_https_compatible)
+                
+                # Debug-Ausgabe
+                print(f"Versuche Logo zu laden von: {logo_path}")
                 
                 # Profilbild abrufen, falls vorhanden
                 profile_image_path = personal_data.get("profile_image", None)
@@ -1043,12 +1051,33 @@ class ProfileGenerator:
                     except Exception as e:
                         print(f"Fehler beim Laden des Profilbilds: {str(e)}")
                         profile_img = None
+                
+                # Direkter Zugriff auf die Bilddatei im static-Verzeichnis als Fallback
+                if not logo_path or not os.path.exists(logo_path):
+                    # Prüfen Sie verschiedene mögliche Pfade
+                    fallback_paths = [
+                        os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'static', 'images', 'galdoralogo.png'),
+                        './static/images/galdoralogo.png',
+                        '../static/images/galdoralogo.png',
+                        '../../static/images/galdoralogo.png',
+                        os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'static', 'images', 'Galdoralogo.png'),
+                        './static/images/Galdoralogo.png',
+                        '../static/images/Galdoralogo.png',
+                        '../../static/images/Galdoralogo.png'
+                    ]
+                    
+                    for path in fallback_paths:
+                        if os.path.exists(path):
+                            logo_path = path
+                            print(f"Fallback: Logo gefunden in: {logo_path}")
+                            break
             
                 # Erstelle eine Tabelle für das Logo oben
-                if os.path.exists(logo_path) and os.path.isfile(logo_path):
+                if logo_path and os.path.exists(logo_path) and os.path.isfile(logo_path):
                     try:
                         # Logo-Größe korrigieren (Original-Proportionen beibehalten)
                         from PIL import Image as PILImage
+                        print(f"Lade Logo aus: {logo_path}")
                         img_pil = PILImage.open(logo_path)
                         img_width, img_height = img_pil.size
                         aspect_ratio = img_width / img_height
@@ -1080,7 +1109,7 @@ class ProfileGenerator:
                         # Fallback wenn Bild nicht geladen werden konnte
                         elements.append(Paragraph("GALDORA", self.custom_styles['GaldoraLogo']))
                 else:
-                    print(f"Logo-Datei nicht gefunden: {logo_path}")
+                    print(f"Logo-Datei nicht gefunden oder ungültig: {logo_path}")
                     # Fallback wenn Bild nicht gefunden wurde
                     elements.append(Paragraph("GALDORA", self.custom_styles['GaldoraLogo']))
             

@@ -22,12 +22,19 @@ def get_image_path(image_name, use_static=True):
     sources_dir = os.path.join(project_root, 'sources')
     static_dir = os.path.join(project_root, 'static', 'images')
     
+    # Debug output
+    print(f"Looking for image: {image_name}")
+    print(f"Project root: {project_root}")
+    print(f"Sources dir: {sources_dir}")
+    print(f"Static dir: {static_dir}")
+    
     # Detect if we're running in Streamlit Cloud
     is_streamlit_cloud = os.environ.get('STREAMLIT_SHARING_MODE') == 'streamlit' or \
                           os.environ.get('IS_STREAMLIT_CLOUD') == 'true'
     
     # Always use static for Streamlit Cloud and when explicitly requested
     use_static = use_static or is_streamlit_cloud
+    print(f"Using static directory: {use_static}")
     
     # Ensure static/images directory exists
     if not os.path.exists(static_dir):
