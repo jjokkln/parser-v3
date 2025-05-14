@@ -238,6 +238,30 @@ Die aktuelle Version (v5) enthält folgende Verbesserungen:
   - Speichern von bevorzugten Templates für zukünftige Verwendung
   - Eindeutige Schlüssel für Checkbox-Widgets zur Vermeidung von Konflikten
 
+## Deployment-Informationen (NEU)
+
+Die Anwendung kann jetzt über Streamlit Cloud deployed werden. Das Projekt wurde in folgendem Repository veröffentlicht:
+
+- **GitHub Repository**: [https://github.com/jjokkln/Streamlit-Parser.git](https://github.com/jjokkln/Streamlit-Parser.git)
+- **Deployment-Dokumentation**: Eine detaillierte Anleitung zur Deployment findet sich in der Datei README_STREAMLIT.md
+- **Branches**:
+  - `main`: Hauptzweig für Deployment
+  - `streamlit-deployment`: Speziell vorbereiteter Zweig für Streamlit Cloud
+
+### Deployment-Voraussetzungen
+
+- Streamlit Cloud Account
+- OpenAI API-Key (in Streamlit Secrets konfiguriert)
+- GitHub-Zugriff auf das Repository
+
+### Deployment-Schritte
+
+1. Repository forken oder Zugriff erhalten
+2. Streamlit Cloud Dashboard öffnen
+3. Neue App erstellen und Repository verknüpfen
+4. OpenAI API-Key in den Secrets konfigurieren
+5. Deployment starten
+
 ## Bekannte Probleme in v4 (behoben in v5)
 
 - ✅ Fehler bei der PDF-Vorschau: In Schritt 3 konnte es zu einem Fehler kommen, wenn `st.session_state.preview_pdf` den Wert `None` hatte
