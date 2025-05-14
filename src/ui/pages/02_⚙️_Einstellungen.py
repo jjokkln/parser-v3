@@ -163,10 +163,7 @@ st.selectbox("KI-Modell",
             help="Wählen Sie das zu verwendende KI-Modell für die Textextraktion")
 
 # API-Key (Placeholder)
-api_key = st.text_input("OpenAI API-Key", 
-                        type="password", 
-                        disabled=True,
-                        help="Ihr OpenAI API-Key für den Zugriff auf die KI-Modelle")
+st.info("Aus Sicherheitsgründen werden API-Keys nie angezeigt. Sie können in der Konverter-Ansicht einen neuen API-Key eingeben und speichern.")
 
 # Erweiterte KI-Einstellungen
 with st.expander("Erweiterte KI-Einstellungen"):

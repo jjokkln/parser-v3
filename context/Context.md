@@ -238,13 +238,13 @@ Die aktuelle Version (v5) enthält folgende Verbesserungen:
   - Speichern von bevorzugten Templates für zukünftige Verwendung
   - Eindeutige Schlüssel für Checkbox-Widgets zur Vermeidung von Konflikten
 
-## Bekannte Probleme in v4
+## Bekannte Probleme in v4 (behoben in v5)
 
-- Fehler bei der PDF-Vorschau: In Schritt 3 kann es zu einem Fehler kommen, wenn `st.session_state.preview_pdf` den Wert `None` hat
-- Der Fehler tritt auf in der Funktion `display_pdf()` in Zeile 48 der app.py
-- Fehlermeldung: `TypeError: expected str, bytes or os.PathLike object, not NoneType`
-- Eine Überprüfung auf `None` sollte implementiert werden, bevor versucht wird, die Datei zu öffnen
-- Die Drag & Drop-Funktionalität setzt auf Pfeiltasten statt echter Drag & Drop-Interaktion mit der Maus
+- ✅ Fehler bei der PDF-Vorschau: In Schritt 3 konnte es zu einem Fehler kommen, wenn `st.session_state.preview_pdf` den Wert `None` hatte
+- ✅ Der Fehler trat auf in der Funktion `display_pdf()` in Zeile 48 der app.py
+- ✅ Fehlermeldung: `TypeError: expected str, bytes or os.PathLike object, not NoneType`
+- ✅ Eine Überprüfung auf `None` wurde implementiert, bevor versucht wird, die Datei zu öffnen
+- Die Drag & Drop-Funktionalität setzt auf Pfeiltasten statt echter Drag & Drop-Interaktion mit der Maus (noch nicht behoben)
 
 ## Aktuelle Grenzen und zukünftige Erweiterungen
 

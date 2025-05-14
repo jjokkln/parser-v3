@@ -701,33 +701,43 @@ def reset_session():
     if 'weiterbildung_items' in st.session_state:
         del st.session_state.weiterbildung_items
     
-    # Temporäre Dateien aufräumen
-    if 'temp_files' in st.session_state:
-        for temp_file in st.session_state.temp_files:
+    # Temporäre Dateien löschen
+    for temp_file in st.session_state.temp_files:
+        if os.path.exists(temp_file):
             try:
-                if os.path.exists(temp_file):
-                    os.unlink(temp_file)
+                os.remove(temp_file)
             except Exception as e:
-                print(f"Fehler beim Löschen von Temp-Datei: {str(e)}")
-        st.session_state.temp_files = []
-    else:
-        # Initialisiere temp_files, falls es noch nicht existiert
-        st.session_state.temp_files = []
-    # Demo-Modus zurücksetzen
-    st.session_state.demo_mode = False
+                print(f"Fehler beim Löschen von {temp_file}: {e}")
+    
+    # Temporäre Dateiliste leeren
+    st.session_state.temp_files = []
+
+# Funktion für Home.py - leitet zu Konverter-Seite weiter
+# HINWEIS: Diese app.py und die 01_Konverter.py sind funktional identisch.
+# Die Hauptfunktionalität sollte langfristig in der Konverter-Seite bleiben,
+# und diese app.py könnte entfernt oder vereinfacht werden.
+def run_main_app():
+    """Hauptfunktion zum Ausführen der App, wird von Home.py aufgerufen"""
+    # Leite zur Konverter-Seite weiter, da dort die Hauptfunktionalität liegt
+    st.markdown("""
+    <meta http-equiv="refresh" content="0;URL='/Konverter'" />
+    <p>Weiterleitung zur Konverter-Seite...</p>
+    """, unsafe_allow_html=True)
 
 def display_pdf(file_path):
-    """Zeigt ein PDF als Base64-String an"""
+    """Zeigt ein PDF im Browser an, funktioniert sowohl lokal als auch auf Streamlit Cloud"""
     # Prüfe, ob ein gültiger Dateipfad vorhanden ist
     if file_path is None:
         # Zeige eine Fehlermeldung statt des PDFs an
         print("Fehler: PDF-Pfad ist None")
-        return '<div style="text-align: center; padding: 20px; background-color: #f8d7da; color: #721c24; border-radius: 5px;">PDF-Vorschau nicht verfügbar. Bitte aktualisieren Sie die Vorschau.</div>'
+        st.error("PDF-Vorschau nicht verfügbar. Bitte aktualisieren Sie die Vorschau.", icon="🚫")
+        return None
     
     # Prüfe, ob die Datei existiert
     if not os.path.exists(file_path):
         print(f"Fehler: PDF-Datei existiert nicht: {file_path}")
-        return '<div style="text-align: center; padding: 20px; background-color: #f8d7da; color: #721c24; border-radius: 5px;">PDF-Datei existiert nicht. Bitte generieren Sie die Vorschau erneut.</div>'
+        st.error(f"PDF-Datei existiert nicht: {file_path}", icon="🚫")
+        return None
     
     try:
         # Prüfe, ob die Datei eine gültige PDF-Datei ist
@@ -736,29 +746,69 @@ def display_pdf(file_path):
             # Prüfe auf PDF-Signatur (%PDF-)
             if not file_content.startswith(b'%PDF-'):
                 print(f"Fehler: Keine gültige PDF-Datei: {file_path}")
-                return '<div style="text-align: center; padding: 20px; background-color: #f8d7da; color: #721c24; border-radius: 5px;">Die Datei ist keine gültige PDF-Datei. Bitte generieren Sie die Vorschau erneut.</div>'
+                st.error("Die Datei ist keine gültige PDF-Datei. Bitte generieren Sie die Vorschau erneut.", icon="🚫")
+                return None
             
             base64_pdf = base64.b64encode(file_content).decode('utf-8')
         
-        # Alternative PDF-Anzeige, die besser mit Chrome-Sicherheitsrichtlinien kompatibel ist
-        pdf_display = f'''
-        <div style="display: flex; justify-content: center; width: 100%; margin: 0 auto; border: 1px solid #ddd; border-radius: 5px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-            <object 
-                data="data:application/pdf;base64,{base64_pdf}" 
-                type="application/pdf"
+        # Zwei Methoden zur PDF-Anzeige: direkt über Streamlit oder über HTML
+
+        # Methode 1: Streamlit PDF-Anzeige
+        try:
+            # Versuche, die PDF direkt über Streamlit anzuzeigen
+            st.download_button(
+                label="PDF herunterladen",
+                data=file_content,
+                file_name="profil.pdf",
+                mime="application/pdf",
+            )
+            
+            # Einbetten des PDFs in ein iframe mit responsivem Design
+            pdf_display = f"""
+            <iframe 
+                src="data:application/pdf;base64,{base64_pdf}" 
                 width="100%" 
-                height="800"
-                style="border: none;">
-                <p>Ihr Browser kann PDFs nicht anzeigen. 
-                <a href="data:application/pdf;base64,{base64_pdf}" download="dokument.pdf">Klicken Sie hier, um das PDF herunterzuladen</a>.</p>
-            </object>
-        </div>
-        '''
-        return pdf_display
+                height="800" 
+                style="border: none; border-radius: 5px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+            </iframe>
+            """
+            st.markdown(pdf_display, unsafe_allow_html=True)
+            return True
+        
+        except Exception as iframe_error:
+            print(f"Fehler bei der iframe-Methode: {str(iframe_error)}")
+            
+            # Fallback-Methode: object tag
+            pdf_display = f"""
+            <div style="display: flex; justify-content: center; width: 100%; margin: 0 auto; border: 1px solid #ddd; 
+                        border-radius: 5px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                <object 
+                    data="data:application/pdf;base64,{base64_pdf}" 
+                    type="application/pdf"
+                    width="100%" 
+                    height="800"
+                    style="border: none;">
+                    <div style="text-align: center; padding: 20px;">
+                        <p>Ihr Browser kann PDFs nicht direkt anzeigen.</p>
+                        <a href="data:application/pdf;base64,{base64_pdf}" 
+                           download="profil.pdf" 
+                           style="display: inline-block; background: rgba(255,255,255,0.2); 
+                                  color: white; padding: 10px 20px; border-radius: 8px; 
+                                  text-decoration: none; margin-top: 15px;">
+                            PDF herunterladen
+                        </a>
+                    </div>
+                </object>
+            </div>
+            """
+            st.markdown(pdf_display, unsafe_allow_html=True)
+            return True
+            
     except Exception as e:
         # Zeige eine Fehlermeldung bei sonstigen Problemen
         print(f"Fehler beim Laden der PDF-Vorschau: {str(e)}, Pfad: {file_path}")
-        return f'<div style="text-align: center; padding: 20px; background-color: #f8d7da; color: #721c24; border-radius: 5px;">Fehler beim Laden der PDF-Vorschau: {str(e)}</div>'
+        st.error(f"Fehler beim Laden der PDF-Vorschau: {str(e)}", icon="🚫")
+        return None
 
 # Seitentitel und Konfiguration
 st.set_page_config(page_title="CV2Profile Konverter", layout="wide")
@@ -816,16 +866,18 @@ with st.sidebar:
     # Lade den gespeicherten API-Key oder verwende den leeren String
     api_key_value = st.session_state.saved_api_key
 
-    # API-Key Eingabefeld
+    # API-Key Eingabefeld - Immer als Passwort anzeigen ohne den Wert anzuzeigen
     api_key_input = st.text_input("OpenAI API Key", 
-                                 value=api_key_value,
+                                 value="",  # Leerer Wert, damit der Key nie angezeigt wird
+                                 placeholder="API Key eingeben (wird nicht angezeigt)",
                                  type="password",
                                  help="Dein OpenAI API-Key wird benötigt, um Lebensläufe zu analysieren.",
                                  disabled=st.session_state.demo_mode)
 
     # Option zum Speichern des API-Keys (nur wenn nicht im Demo-Modus)
     if api_key_input and not st.session_state.demo_mode:
-        if api_key_input != st.session_state.saved_api_key:
+        # Wenn ein neuer API Key eingegeben wurde, speichern wir ihn
+        if api_key_input != "":
             save_key = st.checkbox("API-Key für zukünftige Sitzungen speichern", value=True,
                                   help="Der API-Key wird lokal auf deinem Computer gespeichert.")
             
@@ -1057,6 +1109,8 @@ if st.session_state.step == 1:
                     email = "gl@galdora.de"
                 elif selected_ansprechpartner == "Konrad Ruszczyk":
                     email = "konrad@galdora.de"
+                elif selected_ansprechpartner == "Alessandro Böhm":
+                    email = "boehm@galdora.de"  # Korrigierter E-Mail mit "oe" statt "ö"
                 else:
                     # Standard E-Mail-Format für andere Ansprechpartner
                     nachname = selected_ansprechpartner.split()[-1]
@@ -1471,8 +1525,13 @@ if st.session_state.step == 1:
                         profile_path = generator.generate_profile(edited_data_to_use, output_path, template=template_to_use)
                         st.session_state.preview_pdf = profile_path
                         
-                        # Zeige eine Erfolgsmeldung an
-                        st.success("Profil erfolgreich generiert!")
+                        # Vergewissere, dass die PDF-Datei existiert
+                        if os.path.exists(profile_path) and os.path.getsize(profile_path) > 0:
+                            # Zeige eine Erfolgsmeldung an
+                            st.success("Profil erfolgreich generiert!")
+                        else:
+                            st.error("Die generierte PDF konnte nicht gefunden werden oder ist leer.", icon="🚫")
+                            st.session_state.preview_pdf = None
                         
                         # Speichere das ausgewählte Template für zukünftige Aktualisierungen
                         st.session_state.selected_template = template_to_use
@@ -1484,8 +1543,26 @@ if st.session_state.step == 1:
                 st.markdown("#### Profil-Vorschau")
                 # Prüfen ob die Datei existiert, bevor wir versuchen sie anzuzeigen
                 if st.session_state.preview_pdf and os.path.exists(st.session_state.preview_pdf):
-                    pdf_display = display_pdf(st.session_state.preview_pdf)
-                    st.markdown(pdf_display, unsafe_allow_html=True)
+                    # PDF-Vorschau anzeigen mit verbesserter Methode
+                    # Die neue display_pdf Funktion zeigt die PDF direkt an oder liefert None zurück
+                    display_result = display_pdf(st.session_state.preview_pdf)
+                    
+                    # Wenn die PDF nicht angezeigt werden konnte, zeige zusätzliche Hilfe an
+                    if display_result is None:
+                        st.warning("Die PDF-Vorschau konnte nicht vollständig angezeigt werden. Sie können die PDF aber trotzdem herunterladen.", icon="⚠️")
+                        
+                        # Biete Download-Button als Alternative an
+                        try:
+                            with open(st.session_state.preview_pdf, "rb") as file:
+                                st.download_button(
+                                    label="PDF direkt herunterladen",
+                                    data=file,
+                                    file_name="Profil.pdf",
+                                    mime="application/pdf",
+                                    key="direct_download_pdf"
+                                )
+                        except Exception as e:
+                            st.error(f"Fehler beim Laden der PDF: {str(e)}", icon="🚫")
                 else:
                     st.error("Die PDF-Vorschau ist nicht verfügbar. Bitte generieren Sie die Vorschau erneut.")
                 
@@ -1788,6 +1865,8 @@ if st.session_state.step == 1:
                                 email = "gl@galdora.de"
                             elif selected_ansprechpartner == "Konrad Ruszczyk":
                                 email = "konrad@galdora.de"
+                            elif selected_ansprechpartner == "Alessandro Böhm":
+                                email = "boehm@galdora.de"  # Korrigierter E-Mail mit "oe" statt "ö"
                             else:
                                 # Standard E-Mail-Format für andere Ansprechpartner
                                 nachname = selected_ansprechpartner.split()[-1]
@@ -2196,8 +2275,13 @@ if st.session_state.step == 1:
                                     profile_path = generator.generate_profile(edited_data_to_use, output_path, template=template_to_use)
                                     st.session_state.preview_pdf = profile_path
                                     
-                                    # Zeige eine Erfolgsmeldung an
-                                    st.success("Profil erfolgreich generiert!")
+                                    # Vergewissere, dass die PDF-Datei existiert
+                                    if os.path.exists(profile_path) and os.path.getsize(profile_path) > 0:
+                                        # Zeige eine Erfolgsmeldung an
+                                        st.success("Profil erfolgreich generiert!")
+                                    else:
+                                        st.error("Die generierte PDF konnte nicht gefunden werden oder ist leer.", icon="🚫")
+                                        st.session_state.preview_pdf = None
                                     
                                     # Speichere das ausgewählte Template für zukünftige Aktualisierungen
                                     st.session_state.selected_template = template_to_use
@@ -2209,8 +2293,26 @@ if st.session_state.step == 1:
                             st.markdown("#### Profil-Vorschau")
                             # Prüfen ob die Datei existiert, bevor wir versuchen sie anzuzeigen
                             if st.session_state.preview_pdf and os.path.exists(st.session_state.preview_pdf):
-                                pdf_display = display_pdf(st.session_state.preview_pdf)
-                                st.markdown(pdf_display, unsafe_allow_html=True)
+                                # PDF-Vorschau anzeigen mit verbesserter Methode
+                                # Die neue display_pdf Funktion zeigt die PDF direkt an oder liefert None zurück
+                                display_result = display_pdf(st.session_state.preview_pdf)
+                                
+                                # Wenn die PDF nicht angezeigt werden konnte, zeige zusätzliche Hilfe an
+                                if display_result is None:
+                                    st.warning("Die PDF-Vorschau konnte nicht vollständig angezeigt werden. Sie können die PDF aber trotzdem herunterladen.", icon="⚠️")
+                                    
+                                    # Biete Download-Button als Alternative an
+                                    try:
+                                        with open(st.session_state.preview_pdf, "rb") as file:
+                                            st.download_button(
+                                                label="PDF direkt herunterladen",
+                                                data=file,
+                                                file_name="Profil.pdf",
+                                                mime="application/pdf",
+                                                key="direct_download_pdf2"
+                                            )
+                                    except Exception as e:
+                                        st.error(f"Fehler beim Laden der PDF: {str(e)}", icon="🚫")
                             else:
                                 st.error("Die PDF-Vorschau ist nicht verfügbar. Bitte generieren Sie die Vorschau erneut.")
                             

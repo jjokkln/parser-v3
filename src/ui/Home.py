@@ -13,7 +13,7 @@ from pathlib import Path
 # Füge den übergeordneten Ordner zum Pythonpfad hinzu, um relative Importe zu ermöglichen
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-# Importe aus der app.py
+# Import der run_main_app Funktion aus app.py
 from src.ui.app import run_main_app
 
 # Seitentitel und Konfiguration
@@ -64,6 +64,5 @@ with st.sidebar:
     </a>
     """, unsafe_allow_html=True)
 
-# Starte die Hauptanwendung
-# Die Funktion run_main_app muss in app.py implementiert werden
+# Starte die Hauptanwendung mit Redirect zur Konverter-Seite
 run_main_app() 

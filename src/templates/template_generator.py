@@ -154,28 +154,52 @@ class ProfileGenerator:
             italic_style.font.size = Pt(10)
             italic_style.font.italic = True
             
-            # Korrekte Pfade zum Verzeichnis der Quellendateien
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            sources_dir = os.path.join(os.path.dirname(os.path.dirname(current_dir)), 'sources')
+            # Stelle sicher, dass alle Bilder im static-Verzeichnis verfügbar sind
+            ensure_images_in_static()
             
-            # Wenn sources nicht existiert, versuche relative Pfade vom Arbeitsverzeichnis
-            if not os.path.exists(sources_dir):
-                sources_dir = 'sources'
-                # Erstelle das Verzeichnis, falls es nicht existiert
-                if not os.path.exists(sources_dir):
-                    os.makedirs(sources_dir, exist_ok=True)
-                    print(f"Verzeichnis '{sources_dir}' wurde erstellt")
+            # Verwende die verbesserte image_utils Funktion für das Logo
+            # True bedeutet, dass wir das static/images Verzeichnis verwenden (für HTTPS-Kompatibilität)
+            logo_path = get_image_path('galdoralogo.png', use_static=True)
+            
+            # Fallback-Pfade für das Logo
+            if not logo_path or not os.path.exists(logo_path):
+                logo_path = get_image_path('Galdoralogo.png', use_static=True)
+            
+            # Weitere Fallbacks mit absoluten und relativen Pfaden
+            if not logo_path or not os.path.exists(logo_path):
+                fallback_paths = [
+                    './static/images/galdoralogo.png',
+                    '../static/images/galdoralogo.png',
+                    './sources/galdoralogo.png',
+                    '../sources/galdoralogo.png',
+                    './static/images/Galdoralogo.png',
+                    '../static/images/Galdoralogo.png',
+                    './sources/Galdoralogo.png',
+                    '../sources/Galdoralogo.png'
+                ]
+                
+                for path in fallback_paths:
+                    if os.path.exists(path):
+                        logo_path = path
+                        print(f"DOCX: Logo gefunden in Fallback-Pfad: {logo_path}")
+                        break
             
             # Logo einfügen, wenn verfügbar
-            logo_path = os.path.join(sources_dir, 'Galdoralogo.png')
-            
-            if os.path.exists(logo_path) and os.path.isfile(logo_path):
-                # Paragraph für das Logo erstellen
-                paragraph = doc.add_paragraph()
-                paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
-                run = paragraph.add_run()
-                run.add_picture(logo_path, width=Cm(5))  # Logo mit 5cm Breite einfügen
+            if logo_path and os.path.exists(logo_path) and os.path.isfile(logo_path):
+                try:
+                    print(f"DOCX: Logo wird geladen aus: {logo_path}")
+                    # Paragraph für das Logo erstellen
+                    paragraph = doc.add_paragraph()
+                    paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                    run = paragraph.add_run()
+                    run.add_picture(logo_path, width=Cm(5))  # Logo mit 5cm Breite einfügen
+                except Exception as e:
+                    print(f"DOCX: Fehler beim Laden des Logos: {str(e)}")
+                    # Fallback, wenn ein Fehler auftritt
+                    header = doc.add_paragraph("GALDORA", style='GaldoraLogo')
+                    header.alignment = WD_ALIGN_PARAGRAPH.LEFT
             else:
+                print(f"DOCX: Logo-Datei nicht gefunden: {logo_path}")
                 # Fallback, wenn kein Logo gefunden wurde
                 header = doc.add_paragraph("GALDORA", style='GaldoraLogo')
                 header.alignment = WD_ALIGN_PARAGRAPH.LEFT
@@ -348,7 +372,12 @@ class ProfileGenerator:
                 anrede = f"Herr {nachname}"
             
             telefon = contact_data.get("telefon", "")
-            email = contact_data.get("email", "")
+            
+            # E-Mail mit Sonderbehandlung für Umlaute
+            if nachname == "Böhm":
+                email = contact_data.get("email", "boehm@galdora.de")
+            else:
+                email = contact_data.get("email", "")
             
             if ansprechpartner:
                 doc.add_paragraph("IHR ANSPRECHPARTNER").bold = True
@@ -583,10 +612,12 @@ class ProfileGenerator:
             # Stelle sicher, dass alle Bilder im static-Verzeichnis verfügbar sind (für HTTPS-Kompatibilität)
             ensure_images_in_static()
             
-            # Verwende die Image-Utility für den Pfad
-            # Bei HTTPS-Server nutze use_static=True, für Localhost use_static=False
-            # Standardmäßig verwenden wir das static-Verzeichnis für HTTPS-Kompatibilität
-            use_https_compatible = True  # Explizit auf True gesetzt für HTTPS-Kompatibilität
+            # Stelle sicher, dass wir das static-Verzeichnis für alle Umgebungen verwenden
+            # Dies ist essenziell für die Kompatibilität mit Streamlit Cloud
+            use_https_compatible = True
+            
+            # Log zur Fehlerdiagnose
+            print(f"Erstelle PDF mit Template: {template}, HTTPS-Kompatibel: {use_https_compatible}")
             
             # Je nach gewähltem Template unterschiedliche Layouts erstellen
             if template == "modern":
@@ -594,11 +625,34 @@ class ProfileGenerator:
                 # Ensure we have personal_data initialized at the start
                 personal_data = profile_data.get('persönliche_daten', {})
                 
-                # Verwende das GALDORA Logo aus dem richtigen Ordner
-                logo_path = get_image_path('Galdoralogo.png', use_static=use_https_compatible)
+                # Versuche, das GALDORA Logo zu laden (verbesserte Robustheit)
+                logo_path = get_image_path('galdoralogo.png', use_static=use_https_compatible)
+                
+                # Fallback-Pfade für das Logo
+                if not logo_path or not os.path.exists(logo_path):
+                    logo_path = get_image_path('Galdoralogo.png', use_static=use_https_compatible)
+                
+                if not logo_path or not os.path.exists(logo_path):
+                    # Weitere Fallbacks mit absoluten und relativen Pfaden versuchen
+                    fallback_paths = [
+                        './static/images/galdoralogo.png',
+                        '../static/images/galdoralogo.png',
+                        './sources/galdoralogo.png',
+                        '../sources/galdoralogo.png',
+                        './static/images/Galdoralogo.png',
+                        '../static/images/Galdoralogo.png',
+                        './sources/Galdoralogo.png',
+                        '../sources/Galdoralogo.png'
+                    ]
+                    
+                    for path in fallback_paths:
+                        if os.path.exists(path):
+                            logo_path = path
+                            print(f"Logo gefunden in Fallback-Pfad: {logo_path}")
+                            break
                 
                 # Erstelle eine Tabelle für das Logo oben
-                if os.path.exists(logo_path) and os.path.isfile(logo_path):
+                if logo_path and os.path.exists(logo_path) and os.path.isfile(logo_path):
                     try:
                         # Logo-Größe korrigieren (Original-Proportionen beibehalten)
                         from PIL import Image as PILImage
@@ -609,6 +663,7 @@ class ProfileGenerator:
                         target_width = 150
                         target_height = target_width / aspect_ratio
                         
+                        print(f"Logo wird geladen aus: {logo_path}")
                         img = Image(logo_path, width=target_width, height=target_height)
                         elements.append(Table([[img]], colWidths=[A4[0] - 40*mm]))
                         elements.append(Spacer(1, 0.5*cm))
@@ -616,7 +671,7 @@ class ProfileGenerator:
                         print(f"Fehler beim Laden des Logos: {str(e)}")
                         elements.append(Paragraph("GALDORA", self.custom_styles['GaldoraLogo']))
                 else:
-                    print(f"Logo-Datei nicht gefunden: {logo_path}")
+                    print(f"Logo-Datei nicht gefunden in: {logo_path}")
                     elements.append(Paragraph("GALDORA", self.custom_styles['GaldoraLogo']))
                 
                 # Persönliche Daten bereits oben initialisiert
@@ -1054,7 +1109,12 @@ class ProfileGenerator:
                 anrede = f"Herr {nachname}"
             
             telefon = kontakt.get('telefon', '02161 62126-02')
-            email = kontakt.get('email', f"{nachname.lower()}@galdora.de")
+            
+            # Email-Adresse mit Sonderbehandlung für Umlaute
+            if nachname == "Böhm":
+                email = kontakt.get('email', "boehm@galdora.de")
+            else:
+                email = kontakt.get('email', f"{nachname.lower()}@galdora.de")
                 
             # Erstelle Layout für Ansprechpartner
             elements.append(Paragraph(anrede, self.custom_styles['ContactData']))
@@ -1159,7 +1219,7 @@ class ProfileGenerator:
             # Trennlinie zwischen Berufserfahrung und Ausbildung
             elements.append(HRFlowable(width="100%", thickness=1, lineCap='round', color=colors.lightgrey))
             elements.append(Spacer(1, 0.5*cm))
-            elements.append(Paragraph("Ausbildung/ Weiterbildung", self.custom_styles['Heading2']))
+            elements.append(Paragraph("Ausbildung", self.custom_styles['Heading2']))
             
             # Ausbildungen im gleichen Format wie Berufserfahrung darstellen
             ausbildungen = profile_data.get('ausbildung', [])

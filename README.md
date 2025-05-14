@@ -1,21 +1,55 @@
-# CV2Profile - KI-gestützter Lebenslauf-Parser und Profilgenerator
+# Parser v5 - Lebenslauf-Konvertierungs- und Profil-Generator
 
-Ein Werkzeug zum Extrahieren von Informationen aus Lebensläufen und zur Erstellung standardisierter Profile.
+## Überblick
 
-## Funktionen
+Diese Anwendung ist ein KI-gestützter Lebenslauf-Parser, der Dokumente analysiert und in strukturierte Daten konvertiert. Mit dem integrierten Profil-Generator können aus diesen Daten professionelle PDF- und DOCX-Profile erstellt werden.
 
-- Automatische Extraktion von Daten aus Lebensläufen (PDF, DOCX, JPEG, PNG)
-- KI-gestützte Analyse mit OpenAI
-- Erstellung standardisierter Profile in PDF und DOCX-Format
-- Verschiedene Profilvorlagen:
-  - **Klassisch**: Übersichtliches Layout mit Logo und klarer Struktur
-  - **Modern**: Zweispaltiges Design mit weinroter linker Spalte für persönliche Daten und weißer rechter Spalte für berufliche Informationen
-  - **Professionell**: Elegantes Business-Design
-  - **Minimalistisch**: Reduziertes Layout für maximale Klarheit
-- Benutzerfreundliches Streamlit-Frontend
-- Benutzerverwaltete API-Keys und Einstellungen
+## Hauptfunktionen
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://cv2profile.streamlit.app/)
+- **Dokumentenanalyse**: Unterstützt PDF, DOCX, JPG und PNG
+- **KI-Extraktion**: Verwendet OpenAI API für präzise Datenextraktion
+- **Profilgenerierung**: Erstellt professionelle Dokumente aus den extrahierten Daten
+- **Vorlagenauswahl**: Verschiedene Vorlagen (Klassisch, Modern, Professionell, Minimalistisch)
+- **Drag & Drop-Bearbeitung**: Einfache Anpassung der Reihenfolge von Berufserfahrungen
+- **Deployment-kompatibel**: Funktioniert sowohl lokal als auch auf Streamlit Cloud
+
+## Neu in v5
+
+- **Robuste Bilddarstellung**: Verbesserte Kompatibilität mit Streamlit-Deployments
+- **Zuverlässige PDF-Vorschau**: Alternative Anzeigemethoden für alle Browser
+- **Fehlertolerante Bildverarbeitung**: Erweiterte Fallback-Mechanismen für fehlende Bilder
+- **Optimierte DOCX-Generierung**: Verbesserte Integration von Logos in Word-Dokumente
+- **Bessere Fehlermeldungen**: Benutzerfreundliche Hinweise bei Problemen
+- **Automatische Cloud-Erkennung**: Anpassung an lokale oder Cloud-Umgebungen
+
+## Technische Details
+
+Die Anwendung besteht aus mehreren Modulen:
+
+1. **document_processor.py**: Textextraktion aus verschiedenen Dokumentformaten
+2. **ai_extractor.py**: KI-gestützte Datenanalyse mit OpenAI
+3. **template_generator.py**: Erstellung von PDF- und DOCX-Profilen
+4. **app.py**: Benutzerfreundliche Streamlit-Oberfläche
+5. **config.py**: Konfigurationsmanagement für Benutzereinstellungen
+6. **image_utils.py**: HTTPS-kompatible Bildverwaltung
+
+## Start der Anwendung
+
+```bash
+# Umgebung aktivieren (falls vorhanden)
+source venv/bin/activate  # Linux/macOS
+# ODER
+venv\Scripts\activate     # Windows
+
+# Anwendung starten
+streamlit run main.py
+```
+
+## Systemanforderungen
+
+- Python 3.7+
+- OpenAI API-Key
+- Für OCR-Funktionalität: Tesseract OCR
 
 ## Projektbeschreibung
 
@@ -29,27 +63,6 @@ CV2Profile ist ein leistungsstarker CV-Parser, der mit Hilfe von KI-Technologie 
 - **Konfigurationsmanagement** mit sicherer API-Key-Speicherung
 - **Ansprechpartner-Verwaltung** über Dropdown-Menü
 - **Moderne UI** mit Glasmorphismus-Design
-
-## Anwendung lokal starten
-
-1. Repository klonen
-2. Virtuelle Umgebung erstellen und aktivieren:
-   ```
-   python -m venv venv
-   source venv/bin/activate  # Unter Windows: venv\Scripts\activate
-   ```
-3. Abhängigkeiten installieren:
-   ```
-   pip install -r requirements.txt
-   ```
-4. OpenAI API-Key einrichten:
-   - Setze die Umgebungsvariable `OPENAI_API_KEY`
-   - Oder speichere den Key über die Anwendung
-
-5. Streamlit starten:
-   ```
-   streamlit run src/ui/app.py
-   ```
 
 ## Projektstruktur
 

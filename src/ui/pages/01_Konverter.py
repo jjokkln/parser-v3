@@ -781,16 +781,18 @@ with st.sidebar:
     # Lade den gespeicherten API-Key oder verwende den leeren String
     api_key_value = st.session_state.saved_api_key
 
-    # API-Key Eingabefeld
+    # API-Key Eingabefeld - Immer als Passwort anzeigen ohne den Wert anzuzeigen
     api_key_input = st.text_input("OpenAI API Key", 
-                                 value=api_key_value,
+                                 value="",  # Leerer Wert, damit der Key nie angezeigt wird
+                                 placeholder="API Key eingeben (wird nicht angezeigt)",
                                  type="password",
                                  help="Dein OpenAI API-Key wird benötigt, um Lebensläufe zu analysieren.",
                                  disabled=st.session_state.demo_mode)
 
     # Option zum Speichern des API-Keys (nur wenn nicht im Demo-Modus)
     if api_key_input and not st.session_state.demo_mode:
-        if api_key_input != st.session_state.saved_api_key:
+        # Wenn ein neuer API Key eingegeben wurde, speichern wir ihn
+        if api_key_input != "":
             save_key = st.checkbox("API-Key für zukünftige Sitzungen speichern", value=True,
                                   help="Der API-Key wird lokal auf deinem Computer gespeichert.")
             
