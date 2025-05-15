@@ -749,9 +749,9 @@ st.markdown("""
 with st.sidebar:
     st.header("Einstellungen")
     
-    # Link zur Einstellungsseite
+    # Link zur Einstellungsseite mit korrektem Pfad
     st.markdown("""
-    <a href="/01_Settings" target="_self" style="text-decoration: none;">
+    <a href="/02_⚙️_Einstellungen" target="_self" style="text-decoration: none;">
         <div style="background: rgba(255, 255, 255, 0.15); padding: 10px 15px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); border: 1px solid rgba(255, 255, 255, 0.1);">
             <span style="font-size: 24px; margin-right: 10px;">⚙️</span>
             <span style="color: white; font-weight: 500;">Einstellungen öffnen</span>
@@ -778,35 +778,72 @@ with st.sidebar:
         # Seite neu laden, um die Änderungen anzuzeigen
         st.rerun()
     
-    # Lade den gespeicherten API-Key oder verwende den leeren String
-    api_key_value = st.session_state.saved_api_key
-
-    # API-Key Eingabefeld - Immer als Passwort anzeigen ohne den Wert anzuzeigen
-    api_key_input = st.text_input("OpenAI API Key", 
-                                 value="",  # Leerer Wert, damit der Key nie angezeigt wird
-                                 placeholder="API Key eingeben (wird nicht angezeigt)",
-                                 type="password",
-                                 help="Dein OpenAI API-Key wird benötigt, um Lebensläufe zu analysieren.",
-                                 disabled=st.session_state.demo_mode)
-
-    # Option zum Speichern des API-Keys (nur wenn nicht im Demo-Modus)
-    if api_key_input and not st.session_state.demo_mode:
-        # Wenn ein neuer API Key eingegeben wurde, speichern wir ihn
-        if api_key_input != "":
-            save_key = st.checkbox("API-Key für zukünftige Sitzungen speichern", value=True,
-                                  help="Der API-Key wird lokal auf deinem Computer gespeichert.")
-            
-            if save_key and st.button("API-Key speichern"):
-                # Speichere den API-Key
-                config.save_openai_api_key(api_key_input)
-                st.session_state.saved_api_key = api_key_input
-                st.success("API-Key erfolgreich gespeichert!")
-
-    # Zeige Warnung an, wenn kein API-Key vorhanden ist und nicht im Demo-Modus
-    if not api_key_input and not st.session_state.demo_mode:
-        st.warning("Bitte gib deinen OpenAI API Key ein")
-    elif st.session_state.demo_mode:
-        st.info("Im Demo-Modus wird kein OpenAI API Key benötigt")
+    # Statusleiste für den aktuellen Arbeitsschritt
+    st.divider()
+    st.subheader("Status")
+    
+    # Aktuelle Schritte bestimmen
+    current_step = st.session_state.step
+    steps = {
+        1: "Datei hochladen", 
+        2: "Daten bearbeiten", 
+        3: "Profil exportieren"
+    }
+    
+    # Statusleiste anzeigen
+    st.markdown("""
+    <style>
+        .status-step {
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 8px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+        }
+        .active-step {
+            background-color: rgba(76, 175, 80, 0.3);
+            border-left: 4px solid #4CAF50;
+        }
+        .completed-step {
+            background-color: rgba(76, 175, 80, 0.1);
+            border-left: 4px solid rgba(76, 175, 80, 0.4);
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .pending-step {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-left: 4px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.5);
+        }
+        .step-icon {
+            margin-right: 8px;
+            font-size: 16px;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    for step_num, step_name in steps.items():
+        if step_num < current_step:
+            # Abgeschlossener Schritt
+            st.markdown(f"""
+            <div class="status-step completed-step">
+                <span class="step-icon">✓</span> {step_num}. {step_name}
+            </div>
+            """, unsafe_allow_html=True)
+        elif step_num == current_step:
+            # Aktueller Schritt
+            st.markdown(f"""
+            <div class="status-step active-step">
+                <span class="step-icon">▶</span> {step_num}. {step_name}
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            # Ausstehender Schritt
+            st.markdown(f"""
+            <div class="status-step pending-step">
+                <span class="step-icon">○</span> {step_num}. {step_name}
+            </div>
+            """, unsafe_allow_html=True)
     
     # Allgemeine Einstellungen
     st.divider()
@@ -871,8 +908,8 @@ with st.sidebar:
         reset_session()
         st.rerun()
 
-# Verwende den gespeicherten API-Key oder den eingegebenen API-Key
-openai_api_key = api_key_input or st.session_state.saved_api_key
+# Verwende den gespeicherten API-Key aus der Projektkonfiguration
+openai_api_key = config.get_openai_api_key()
 
 # Hauptbereich - basierend auf dem aktuellen Schritt
 if st.session_state.step == 1:

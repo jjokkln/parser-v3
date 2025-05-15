@@ -1,2 +1,6 @@
 venv/
 __pycache__/
+.streamlit/secrets.toml
+api_key.json
+*.pyc
+.DS_Store

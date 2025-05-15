@@ -19,8 +19,23 @@ if [ -d "sources" ]; then
     echo "Bilder in static/images kopiert für HTTPS-Kompatibilität"
 fi
 
-# Führe die Anwendung aus
-python main.py
+# Falls nicht gesetzt, Standardwert verwenden
+if [ -z "$CV2PROFILE_ENTRY_POINT" ]; then
+  export CV2PROFILE_ENTRY_POINT="konverter"
+fi
+
+# Python-Pfad festlegen, damit Module korrekt gefunden werden
+export PYTHONPATH="$PWD:$PYTHONPATH"
+
+# Starte die Anwendung basierend auf der Umgebungsvariable
+if [ "$CV2PROFILE_ENTRY_POINT" = "app" ]; then
+  echo "Starte CV2Profile mit app.py als Einstiegspunkt..."
+  streamlit run main.py
+else
+  echo "Starte CV2Profile mit Konverter als Einstiegspunkt..."
+  cd $(dirname "$0")  # Wechsle ins Hauptverzeichnis
+  streamlit run src/ui/pages/01_Konverter.py
+fi
 
 # Deaktiviere die virtuelle Umgebung, falls aktiviert
 if [ -n "$VIRTUAL_ENV" ]; then

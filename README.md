@@ -12,15 +12,34 @@ Diese Anwendung ist ein KI-gestützter Lebenslauf-Parser, der Dokumente analysie
 - **Vorlagenauswahl**: Verschiedene Vorlagen (Klassisch, Modern, Professionell, Minimalistisch)
 - **Drag & Drop-Bearbeitung**: Einfache Anpassung der Reihenfolge von Berufserfahrungen
 - **Deployment-kompatibel**: Funktioniert sowohl lokal als auch auf Streamlit Cloud
+- **API-Key Verwaltung**: Einfaches Speichern des OpenAI API-Keys im Projektverzeichnis
 
 ## Neu in v5
 
+- **Verbesserte API-Key Verwaltung**: Speichern des API-Keys im Projektverzeichnis für einfachere Nutzung
 - **Robuste Bilddarstellung**: Verbesserte Kompatibilität mit Streamlit-Deployments
 - **Zuverlässige PDF-Vorschau**: Alternative Anzeigemethoden für alle Browser
 - **Fehlertolerante Bildverarbeitung**: Erweiterte Fallback-Mechanismen für fehlende Bilder
 - **Optimierte DOCX-Generierung**: Verbesserte Integration von Logos in Word-Dokumente
 - **Bessere Fehlermeldungen**: Benutzerfreundliche Hinweise bei Problemen
 - **Automatische Cloud-Erkennung**: Anpassung an lokale oder Cloud-Umgebungen
+- **Flexibles Deployment**: Neue Deployment-Skripte für konsistente Anwendungseinstiegspunkte
+
+## API-Key Konfiguration
+
+Der OpenAI API-Key kann auf mehrere Arten konfiguriert werden (in Prioritätsreihenfolge):
+
+1. **Umgebungsvariable**: `OPENAI_API_KEY` in der Systemumgebung
+2. **Projektspezifische Datei**: `api_key.json` im Hauptverzeichnis (für lokale Entwicklung empfohlen)
+3. **Streamlit Secrets**: Über die Streamlit Cloud Konfiguration (für Deployment empfohlen)
+4. **Benutzereinstellungen**: Gespeichert in `~/.cv2profile/settings.json`
+
+Um den API-Key im Projekt zu speichern:
+1. Gehen Sie zu "⚙️ Einstellungen"
+2. Öffnen Sie "API-Key Verwaltung"
+3. Geben Sie Ihren API-Key ein und klicken Sie auf "Im Projekt speichern"
+
+Die Datei `api_key.json` ist in `.gitignore` eingetragen und wird nicht ins Repository übertragen.
 
 ## Technische Details
 
@@ -35,15 +54,32 @@ Die Anwendung besteht aus mehreren Modulen:
 
 ## Start der Anwendung
 
+Standardmäßig wird die Anwendung mit dem Konverter als Einstiegspunkt gestartet:
+
 ```bash
 # Umgebung aktivieren (falls vorhanden)
 source venv/bin/activate  # Linux/macOS
 # ODER
 venv\Scripts\activate     # Windows
 
-# Anwendung starten
-streamlit run main.py
+# Anwendung starten mit Standard-Einstiegspunkt (Konverter)
+./run.sh
 ```
+
+Alternativ kann die Anwendung auch mit dem ursprünglichen `app.py` Einstiegspunkt gestartet werden:
+
+```bash
+# Umgebung aktivieren (falls vorhanden)
+source venv/bin/activate  # Linux/macOS
+# ODER
+venv\Scripts\activate     # Windows
+
+# Anwendung mit app.py als Einstiegspunkt starten
+export CV2PROFILE_ENTRY_POINT="app"
+./run.sh
+```
+
+Weitere Informationen zur Deployment-Strategie finden Sie in der [Deployment-Anleitung](docs/deployment_guide.md).
 
 ## Systemanforderungen
 
@@ -76,7 +112,9 @@ CV2Profile/
 │   │   └── combined_processor.py  # Kombinierte Verarbeitung
 │   │
 │   ├── ui/                     # Benutzeroberfläche
-│   │   └── app.py              # Streamlit-basierte Hauptanwendung
+│   │   ├── app.py              # Streamlit-basierte Hauptanwendung
+│   │   └── pages/              # Streamlit-Seiten
+│   │       └── 01_Konverter.py # Konverter-Hauptfunktionalität
 │   │
 │   ├── utils/                  # Hilfsfunktionen
 │   │   ├── config.py           # Konfigurationsverwaltung
@@ -91,6 +129,17 @@ CV2Profile/
 │
 ├── static/                     # Statische Dateien für HTTPS-Server
 │   └── images/                 # Bilder für HTTPS-Kompatibilität
+│
+├── api_key.json                # Lokale API-Key-Speicherung (in .gitignore)
+│
+├── .github/workflows/          # CI/CD-Konfiguration
+│   └── streamlit_deploy.yml    # GitHub Actions Workflow für Deployment
+│
+├── docs/                       # Dokumentation
+│   └── deployment_guide.md     # Anleitung zur Deployment-Strategie
+│
+├── pre_deploy.sh               # Skript zur Deployment-Vorbereitung
+├── post_deploy.sh              # Skript zur Wiederherstellung nach Deployment
 │
 └── .streamlit/                 # Streamlit-Konfiguration
     └── config.toml             # Streamlit-Einstellungen

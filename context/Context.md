@@ -286,4 +286,49 @@ Die Anwendung kann jetzt über Streamlit Cloud deployed werden. Das Projekt wurd
 - Temporäre Dateien werden nach der Verarbeitung gelöscht
 - Nur für die KI-Analyse werden Daten an OpenAI übertragen (gemäß deren Datenschutzrichtlinien)
 - Keine dauerhafte Speicherung von Bewerberdaten in der Anwendung
-- OpenAI API-Keys werden sicher im Benutzerverzeichnis gespeichert 
+- OpenAI API-Keys werden sicher im Benutzerverzeichnis gespeichert
+
+## API-Key Verwaltung (NEU)
+
+Für eine vereinfachte Nutzung wurde die API-Key-Verwaltung verbessert:
+
+- **Lokale API-Key-Speicherung**: Der OpenAI API-Key kann jetzt in einer projektspezifischen Datei (`api_key.json`) gespeichert werden, die automatisch bei jedem Start der Anwendung geladen wird.
+- **Priorisierte Ladereihenfkolge**:
+  1. Umgebungsvariable `OPENAI_API_KEY`
+  2. Projektspezifische Datei `api_key.json`
+  3. Streamlit Secrets (für Deployment)
+  4. Benutzereinstellungen in `~/.cv2profile/settings.json`
+- **Benutzerfreundliche Konfiguration**: Über die Einstellungsseite kann der API-Key einfach eingegeben und im Projekt gespeichert werden.
+- **Deployment-Sicherheit**: Die `api_key.json` Datei ist in `.gitignore` eingetragen und wird nicht ins Repository übertragen.
+
+Die Implementierung umfasst:
+- Erweiterung von `config.py` mit neuen Funktionen zum Laden und Speichern des projektspezifischen API-Keys
+- Aktualisierung der Einstellungsseite mit einer Benutzeroberfläche zum Verwalten des API-Keys
+- Dokumentation der neuen Funktionalität in der README
+
+Diese Verbesserung ermöglicht es Benutzern, ihren API-Key einmalig zu speichern und dann bei jeder Nutzung der Anwendung ohne erneute Eingabe zu verwenden, was besonders für lokale Entwicklung und wiederholte Nutzung praktisch ist.
+
+## Verbesserte Navigation und Status-Tracking (NEU)
+
+Die Benutzerführung und Navigation wurden weiter optimiert:
+
+- **Visuelle Statusleiste**: Eine intuitive Statusleiste in der Seitenleiste zeigt dem Benutzer jederzeit an, in welchem Schritt des Prozesses er sich befindet:
+  1. Datei hochladen
+  2. Daten bearbeiten
+  3. Profil exportieren
+
+- **Optimierte Navigation**: 
+  - Der "Einstellungen öffnen" Button in der Seitenleiste führt direkt zur Einstellungsseite
+  - Ein "Zurück zum Konverter" Button auf der Einstellungsseite ermöglicht die einfache Rückkehr
+  - Konsistente Gestaltung aller Navigationselemente im Glasmorphismus-Design
+
+- **Sauberere Benutzeroberfläche**:
+  - Entfernung der API-Key-Eingabefelder aus der Seitenleiste zugunsten der zentralen Verwaltung auf der Einstellungsseite
+  - Reduzierung von Redundanz im Interface
+  - Fokussierung auf den Hauptarbeitsablauf
+
+Die verbesserte Navigation und Statusanzeige erhöhen die Benutzerfreundlichkeit, indem sie:
+- Den aktuellen Fortschritt visuell verdeutlichen
+- Die Erwartungen des Benutzers bezüglich der nächsten Schritte lenken
+- Den Kontext der aktuellen Aktion hervorheben
+- Die Navigation zwischen verschiedenen Komponenten der Anwendung vereinfachen 

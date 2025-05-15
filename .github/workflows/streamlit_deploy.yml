@@ -1,0 +1,35 @@
+name: Deploy to Streamlit Cloud
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Make scripts executable
+        run: |
+          chmod +x pre_deploy.sh
+          chmod +x post_deploy.sh
+
+      - name: Run Pre-Deployment Setup
+        run: |
+          ./pre_deploy.sh
+
+      - name: Deploy to Streamlit Cloud
+        run: |
+          echo "Deployment wird automatisch durch Änderungen im GitHub-Repository ausgelöst"
+          echo "Stellen Sie sicher, dass Ihr Repository mit Streamlit Cloud verbunden ist"
+          # Hier könnten zusätzliche Schritte für die Streamlit Cloud API hinzugefügt werden
+          
+      # Post-Deployment wird nicht ausgeführt, da Umgebungsvariable ENVIRONMENT nicht auf 'development' gesetzt ist 

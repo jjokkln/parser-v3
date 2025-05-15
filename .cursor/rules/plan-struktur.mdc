@@ -40,3 +40,6 @@ CursorRules:
     description: >
       Nach jeder User- oder IDE-Task automatisch
       den lokalen Server starten.
+
+
+      Sprache: Deutsch

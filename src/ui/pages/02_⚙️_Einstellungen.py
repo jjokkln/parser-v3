@@ -119,6 +119,16 @@ st.markdown("""
     </p>
 """, unsafe_allow_html=True)
 
+# Zurück-Button zur Konverter-Seite
+st.markdown("""
+<a href="/01_Konverter" target="_self" style="text-decoration: none;">
+    <div style="background: rgba(255, 255, 255, 0.15); padding: 10px 15px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); border: 1px solid rgba(255, 255, 255, 0.1); max-width: 220px;">
+        <span style="font-size: 18px; margin-right: 10px;">⬅️</span>
+        <span style="color: white; font-weight: 500;">Zurück zum Konverter</span>
+    </div>
+</a>
+""", unsafe_allow_html=True)
+
 # Container für die Einstellungen im Glasmorphismus-Stil
 st.markdown("<div class='settings-container'>", unsafe_allow_html=True)
 
@@ -162,8 +172,58 @@ st.selectbox("KI-Modell",
             disabled=True,
             help="Wählen Sie das zu verwendende KI-Modell für die Textextraktion")
 
-# API-Key (Placeholder)
-st.info("Aus Sicherheitsgründen werden API-Keys nie angezeigt. Sie können in der Konverter-Ansicht einen neuen API-Key eingeben und speichern.")
+# API-Key Management
+from pathlib import Path
+import json
+
+# Funktionen zum Laden des API-Keys aus der Projekt-Datei
+def get_project_api_key():
+    """Holt den OpenAI API Key aus der Projektdatei"""
+    try:
+        project_config_file = Path(__file__).parent.parent.parent.parent / "api_key.json"
+        if project_config_file.exists():
+            with open(project_config_file, "r") as f:
+                project_settings = json.load(f)
+                return project_settings.get("openai_api_key", "")
+        return ""
+    except Exception:
+        return ""
+
+# API-Key Status anzeigen
+project_api_key = get_project_api_key()
+if project_api_key and not project_api_key.startswith("sk-your-api-key"):
+    st.success("Ein API-Key ist in der Projektdatei gespeichert. Der Key wird bei jedem Start automatisch geladen.")
+else:
+    st.warning("Kein API-Key in der Projektdatei gefunden. Sie müssen den API-Key bei jedem Start der Anwendung eingeben.")
+
+# API-Key Input und Speichern
+with st.expander("API-Key Verwaltung"):
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        api_key_input = st.text_input(
+            "OpenAI API-Key", 
+            type="password",
+            help="Geben Sie Ihren OpenAI API-Key ein, um ihn im Projekt zu speichern"
+        )
+    with col2:
+        if st.button("Im Projekt speichern"):
+            if api_key_input:
+                success = config.save_project_api_key(api_key_input)
+                if success:
+                    st.success("API-Key erfolgreich im Projekt gespeichert. Er wird jetzt bei jedem Start automatisch geladen.")
+                else:
+                    st.error("Fehler beim Speichern des API-Keys im Projekt.")
+            else:
+                st.error("Bitte geben Sie einen API-Key ein.")
+    
+    st.info("""
+    **Wichtige Hinweise zum API-Key:**
+    
+    1. Der API-Key wird in der Datei `api_key.json` im Projektverzeichnis gespeichert.
+    2. Diese Datei ist in `.gitignore` eingetragen und wird NICHT ins GitHub-Repository übertragen.
+    3. Für lokale Entwicklung ist dies die einfachste Methode.
+    4. Für Deployment auf Streamlit Cloud sollten Sie den API-Key in den Streamlit Secrets konfigurieren.
+    """)
 
 # Erweiterte KI-Einstellungen
 with st.expander("Erweiterte KI-Einstellungen"):
