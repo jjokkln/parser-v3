@@ -49,32 +49,6 @@ def get_logo_as_base64():
         print(f"Error loading logo: {e}")
         return ""
 
-# Funktion zur Sortierung nach Zeitraum (für die chronologische Sortierung)
-def sort_by_time_period(items, reverse=False):
-    """
-    Sortiert eine Liste von Elementen nach dem 'zeitraum'-Feld.
-    
-    Args:
-        items: Liste von Dictionaries mit 'zeitraum'-Feld (Format 'MM/YYYY - MM/YYYY' oder 'MM/YYYY - heute')
-        reverse: Wenn True, wird in umgekehrter Reihenfolge sortiert (neueste zuerst)
-        
-    Returns:
-        Sortierte Liste von Elementen
-    """
-    def extract_year(time_period):
-        # Versuche, ein Jahr aus dem Zeitraum zu extrahieren
-        if not time_period:
-            return 0
-        
-        # Nehme das erste Jahr, das im String gefunden wird
-        years = re.findall(r'(\d{4})', time_period)
-        if years:
-            return int(years[0])
-        return 0
-    
-    # Sortiere die Liste nach dem extrahierten Jahr
-    return sorted(items, key=lambda x: extract_year(x.get('zeitraum', '')), reverse=reverse)
-
 # CSS für Farbverlaufshintergrund und weiße Schaltflächen
 custom_css = """
 <style>
@@ -692,52 +666,33 @@ def reset_session():
     st.session_state.profile_data = {}
     st.session_state.edited_data = {}
     st.session_state.preview_pdf = None
-    
-    # Drag & Drop Session-Variablen zurücksetzen
-    if 'berufserfahrung_items' in st.session_state:
-        del st.session_state.berufserfahrung_items
-    if 'ausbildung_items' in st.session_state:
-        del st.session_state.ausbildung_items
-    if 'weiterbildung_items' in st.session_state:
-        del st.session_state.weiterbildung_items
-    
-    # Temporäre Dateien löschen
-    for temp_file in st.session_state.temp_files:
-        if os.path.exists(temp_file):
+    # Temporäre Dateien aufräumen
+    if 'temp_files' in st.session_state:
+        for temp_file in st.session_state.temp_files:
             try:
-                os.remove(temp_file)
+                if os.path.exists(temp_file):
+                    os.unlink(temp_file)
             except Exception as e:
-                print(f"Fehler beim Löschen von {temp_file}: {e}")
-    
-    # Temporäre Dateiliste leeren
-    st.session_state.temp_files = []
-
-# Funktion für Home.py - leitet zu Konverter-Seite weiter
-# HINWEIS: Diese app.py und die 01_Konverter.py sind funktional identisch.
-# Die Hauptfunktionalität sollte langfristig in der Konverter-Seite bleiben,
-# und diese app.py könnte entfernt oder vereinfacht werden.
-def run_main_app():
-    """Hauptfunktion zum Ausführen der App, wird von Home.py aufgerufen"""
-    # Leite zur Konverter-Seite weiter, da dort die Hauptfunktionalität liegt
-    st.markdown("""
-    <meta http-equiv="refresh" content="0;URL='/Konverter'" />
-    <p>Weiterleitung zur Konverter-Seite...</p>
-    """, unsafe_allow_html=True)
+                print(f"Fehler beim Löschen von Temp-Datei: {str(e)}")
+        st.session_state.temp_files = []
+    else:
+        # Initialisiere temp_files, falls es noch nicht existiert
+        st.session_state.temp_files = []
+    # Demo-Modus zurücksetzen
+    st.session_state.demo_mode = False
 
 def display_pdf(file_path):
-    """Zeigt ein PDF im Browser an, funktioniert sowohl lokal als auch auf Streamlit Cloud"""
+    """Zeigt ein PDF als Base64-String an"""
     # Prüfe, ob ein gültiger Dateipfad vorhanden ist
     if file_path is None:
         # Zeige eine Fehlermeldung statt des PDFs an
         print("Fehler: PDF-Pfad ist None")
-        st.error("PDF-Vorschau nicht verfügbar. Bitte aktualisieren Sie die Vorschau.", icon="🚫")
-        return None
+        return '<div style="text-align: center; padding: 20px; background-color: #f8d7da; color: #721c24; border-radius: 5px;">PDF-Vorschau nicht verfügbar. Bitte aktualisieren Sie die Vorschau.</div>'
     
     # Prüfe, ob die Datei existiert
     if not os.path.exists(file_path):
         print(f"Fehler: PDF-Datei existiert nicht: {file_path}")
-        st.error(f"PDF-Datei existiert nicht: {file_path}", icon="🚫")
-        return None
+        return '<div style="text-align: center; padding: 20px; background-color: #f8d7da; color: #721c24; border-radius: 5px;">PDF-Datei existiert nicht. Bitte generieren Sie die Vorschau erneut.</div>'
     
     try:
         # Prüfe, ob die Datei eine gültige PDF-Datei ist
@@ -746,69 +701,29 @@ def display_pdf(file_path):
             # Prüfe auf PDF-Signatur (%PDF-)
             if not file_content.startswith(b'%PDF-'):
                 print(f"Fehler: Keine gültige PDF-Datei: {file_path}")
-                st.error("Die Datei ist keine gültige PDF-Datei. Bitte generieren Sie die Vorschau erneut.", icon="🚫")
-                return None
+                return '<div style="text-align: center; padding: 20px; background-color: #f8d7da; color: #721c24; border-radius: 5px;">Die Datei ist keine gültige PDF-Datei. Bitte generieren Sie die Vorschau erneut.</div>'
             
             base64_pdf = base64.b64encode(file_content).decode('utf-8')
         
-        # Zwei Methoden zur PDF-Anzeige: direkt über Streamlit oder über HTML
-
-        # Methode 1: Streamlit PDF-Anzeige
-        try:
-            # Versuche, die PDF direkt über Streamlit anzuzeigen
-            st.download_button(
-                label="PDF herunterladen",
-                data=file_content,
-                file_name="profil.pdf",
-                mime="application/pdf",
-            )
-            
-            # Einbetten des PDFs in ein iframe mit responsivem Design
-            pdf_display = f"""
-            <iframe 
-                src="data:application/pdf;base64,{base64_pdf}" 
+        # Alternative PDF-Anzeige, die besser mit Chrome-Sicherheitsrichtlinien kompatibel ist
+        pdf_display = f'''
+        <div style="display: flex; justify-content: center; width: 100%; margin: 0 auto; border: 1px solid #ddd; border-radius: 5px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+            <object 
+                data="data:application/pdf;base64,{base64_pdf}" 
+                type="application/pdf"
                 width="100%" 
-                height="800" 
-                style="border: none; border-radius: 5px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-            </iframe>
-            """
-            st.markdown(pdf_display, unsafe_allow_html=True)
-            return True
-        
-        except Exception as iframe_error:
-            print(f"Fehler bei der iframe-Methode: {str(iframe_error)}")
-            
-            # Fallback-Methode: object tag
-            pdf_display = f"""
-            <div style="display: flex; justify-content: center; width: 100%; margin: 0 auto; border: 1px solid #ddd; 
-                        border-radius: 5px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                <object 
-                    data="data:application/pdf;base64,{base64_pdf}" 
-                    type="application/pdf"
-                    width="100%" 
-                    height="800"
-                    style="border: none;">
-                    <div style="text-align: center; padding: 20px;">
-                        <p>Ihr Browser kann PDFs nicht direkt anzeigen.</p>
-                        <a href="data:application/pdf;base64,{base64_pdf}" 
-                           download="profil.pdf" 
-                           style="display: inline-block; background: rgba(255,255,255,0.2); 
-                                  color: white; padding: 10px 20px; border-radius: 8px; 
-                                  text-decoration: none; margin-top: 15px;">
-                            PDF herunterladen
-                        </a>
-                    </div>
-                </object>
-            </div>
-            """
-            st.markdown(pdf_display, unsafe_allow_html=True)
-            return True
-            
+                height="800"
+                style="border: none;">
+                <p>Ihr Browser kann PDFs nicht anzeigen. 
+                <a href="data:application/pdf;base64,{base64_pdf}" download="dokument.pdf">Klicken Sie hier, um das PDF herunterzuladen</a>.</p>
+            </object>
+        </div>
+        '''
+        return pdf_display
     except Exception as e:
         # Zeige eine Fehlermeldung bei sonstigen Problemen
         print(f"Fehler beim Laden der PDF-Vorschau: {str(e)}, Pfad: {file_path}")
-        st.error(f"Fehler beim Laden der PDF-Vorschau: {str(e)}", icon="🚫")
-        return None
+        return f'<div style="text-align: center; padding: 20px; background-color: #f8d7da; color: #721c24; border-radius: 5px;">Fehler beim Laden der PDF-Vorschau: {str(e)}</div>'
 
 # Seitentitel und Konfiguration
 st.set_page_config(page_title="CV2Profile Konverter", layout="wide")
@@ -1146,8 +1061,6 @@ if st.session_state.step == 1:
                     email = "gl@galdora.de"
                 elif selected_ansprechpartner == "Konrad Ruszczyk":
                     email = "konrad@galdora.de"
-                elif selected_ansprechpartner == "Alessandro Böhm":
-                    email = "boehm@galdora.de"  # Korrigierter E-Mail mit "oe" statt "ö"
                 else:
                     # Standard E-Mail-Format für andere Ansprechpartner
                     nachname = selected_ansprechpartner.split()[-1]
@@ -1170,51 +1083,10 @@ if st.session_state.step == 1:
             # Berufserfahrung
             st.markdown("### Berufserfahrung")
             
-            # Sortieroptionen für Berufserfahrung
-            exp_sort_col1, exp_sort_col2 = st.columns([3, 1])
-            with exp_sort_col1:
-                st.markdown("**Sortierung der Berufserfahrungen:**")
-            with exp_sort_col2:
-                exp_sort_order = st.selectbox(
-                    "Reihenfolge",
-                    options=["Neueste zuerst", "Älteste zuerst"],
-                    index=0,
-                    key="exp_sort_order"
-                )
-            
             # Liste für editierte Berufserfahrungen
             edited_experience = []
             
-            # Sortiere Berufserfahrungen nach Zeitraum
-            berufserfahrung = profile_data.get("berufserfahrung", [])
-            if exp_sort_order == "Neueste zuerst":
-                berufserfahrung = sort_by_time_period(berufserfahrung, reverse=True)
-            else:
-                berufserfahrung = sort_by_time_period(berufserfahrung, reverse=False)
-            
-            # Berufserfahrungen nach Sortierung in der Session speichern, wenn noch nicht vorhanden
-            if 'berufserfahrung_items' not in st.session_state:
-                st.session_state.berufserfahrung_items = berufserfahrung
-            else:
-                # Nur aktualisieren, wenn Sortierung geändert wurde
-                if exp_sort_order != st.session_state.get('exp_sort_order_last', ''):
-                    st.session_state.berufserfahrung_items = berufserfahrung
-                    st.session_state.exp_sort_order_last = exp_sort_order
-            
-            # Funktion zum Verschieben eines Elements nach oben
-            def move_exp_up(index):
-                if index > 0:
-                    st.session_state.berufserfahrung_items[index], st.session_state.berufserfahrung_items[index-1] = st.session_state.berufserfahrung_items[index-1], st.session_state.berufserfahrung_items[index]
-                    st.rerun()
-            
-            # Funktion zum Verschieben eines Elements nach unten
-            def move_exp_down(index):
-                if index < len(st.session_state.berufserfahrung_items) - 1:
-                    st.session_state.berufserfahrung_items[index], st.session_state.berufserfahrung_items[index+1] = st.session_state.berufserfahrung_items[index+1], st.session_state.berufserfahrung_items[index]
-                    st.rerun()
-            
-            # Berufserfahrungen aus der Session verwenden
-            for idx, erfahrung in enumerate(st.session_state.berufserfahrung_items):
+            for idx, erfahrung in enumerate(profile_data.get("berufserfahrung", [])):
                 with st.expander(f"{erfahrung.get('zeitraum', 'Neue Erfahrung')}: {erfahrung.get('position', '')} bei {erfahrung.get('unternehmen', '')}", expanded=False):
                     exp_data = {}
                     col1, col2 = st.columns(2)
@@ -1234,16 +1106,6 @@ if st.session_state.step == 1:
                     )
                     # Aufgaben zurück in eine Liste konvertieren
                     exp_data["aufgaben"] = [task.strip() for task in new_aufgaben.split("\n") if task.strip()]
-                    
-                    # Steuerelemente zum Ändern der Reihenfolge
-                    st.markdown("##### Position anpassen")
-                    cols = st.columns([1, 1, 3])
-                    with cols[0]:
-                        if st.button("↑", key=f"exp_up_{idx}", help="Nach oben verschieben", use_container_width=True):
-                            move_exp_up(idx)
-                    with cols[1]:
-                        if st.button("↓", key=f"exp_down_{idx}", help="Nach unten verschieben", use_container_width=True):
-                            move_exp_down(idx)
                     
                     # Option zum Löschen dieser Berufserfahrung
                     include = st.checkbox(f"Diese Berufserfahrung einbeziehen", value=True, key=f"exp_demo_{idx}")
@@ -1274,72 +1136,21 @@ if st.session_state.step == 1:
             # Ausbildung
             st.markdown("### Ausbildung")
             
-            # Sortieroptionen für Ausbildung
-            edu_sort_col1, edu_sort_col2 = st.columns([3, 1])
-            with edu_sort_col1:
-                st.markdown("**Sortierung der Ausbildungen:**")
-            with edu_sort_col2:
-                edu_sort_order = st.selectbox(
-                    "Reihenfolge",
-                    options=["Neueste zuerst", "Älteste zuerst"],
-                    index=0,
-                    key="edu_sort_order"
-                )
-            
             # Liste für editierte Ausbildungen
             edited_education = []
             
-            # Sortiere Ausbildungen nach Zeitraum
-            ausbildung = profile_data.get("ausbildung", [])
-            if edu_sort_order == "Neueste zuerst":
-                ausbildung = sort_by_time_period(ausbildung, reverse=True)
-            else:
-                ausbildung = sort_by_time_period(ausbildung, reverse=False)
-            
-            # Ausbildungen nach Sortierung in der Session speichern, wenn noch nicht vorhanden
-            if 'ausbildung_items' not in st.session_state:
-                st.session_state.ausbildung_items = ausbildung
-            else:
-                # Nur aktualisieren, wenn Sortierung geändert wurde
-                if edu_sort_order != st.session_state.get('edu_sort_order_last', ''):
-                    st.session_state.ausbildung_items = ausbildung
-                    st.session_state.edu_sort_order_last = edu_sort_order
-            
-            # Funktion zum Verschieben eines Elements nach oben
-            def move_edu_up(index):
-                if index > 0:
-                    st.session_state.ausbildung_items[index], st.session_state.ausbildung_items[index-1] = st.session_state.ausbildung_items[index-1], st.session_state.ausbildung_items[index]
-                    st.rerun()
-            
-            # Funktion zum Verschieben eines Elements nach unten
-            def move_edu_down(index):
-                if index < len(st.session_state.ausbildung_items) - 1:
-                    st.session_state.ausbildung_items[index], st.session_state.ausbildung_items[index+1] = st.session_state.ausbildung_items[index+1], st.session_state.ausbildung_items[index]
-                    st.rerun()
-            
-            # Ausbildungen aus der Session verwenden
-            for idx, ausbildung_item in enumerate(st.session_state.ausbildung_items):
-                with st.expander(f"{ausbildung_item.get('zeitraum', 'Neue Ausbildung')}: {ausbildung_item.get('abschluss', '')} - {ausbildung_item.get('institution', '')}", expanded=False):
+            for idx, ausbildung in enumerate(profile_data.get("ausbildung", [])):
+                with st.expander(f"{ausbildung.get('zeitraum', 'Neue Ausbildung')}: {ausbildung.get('abschluss', '')} - {ausbildung.get('institution', '')}", expanded=False):
                     edu_data = {}
                     col1, col2 = st.columns(2)
                     with col1:
-                        edu_data["zeitraum"] = st.text_input(f"Zeitraum (Ausbildung) #{idx+1}", value=ausbildung_item.get("zeitraum", ""), key=f"edu_zeit_demo_{idx}")
-                        edu_data["institution"] = st.text_input(f"Institution #{idx+1}", value=ausbildung_item.get("institution", ""), key=f"institution_demo_{idx}")
+                        edu_data["zeitraum"] = st.text_input(f"Zeitraum (Ausbildung) #{idx+1}", value=ausbildung.get("zeitraum", ""), key=f"edu_zeit_demo_{idx}")
+                        edu_data["institution"] = st.text_input(f"Institution #{idx+1}", value=ausbildung.get("institution", ""), key=f"institution_demo_{idx}")
                     with col2:
-                        edu_data["abschluss"] = st.text_input(f"Abschluss #{idx+1}", value=ausbildung_item.get("abschluss", ""), key=f"abschluss_demo_{idx}")
-                        edu_data["note"] = st.text_input(f"Note #{idx+1}", value=ausbildung_item.get("note", ""), key=f"note_demo_{idx}")
+                        edu_data["abschluss"] = st.text_input(f"Abschluss #{idx+1}", value=ausbildung.get("abschluss", ""), key=f"abschluss_demo_{idx}")
+                        edu_data["note"] = st.text_input(f"Note #{idx+1}", value=ausbildung.get("note", ""), key=f"note_demo_{idx}")
                     
-                    edu_data["schwerpunkte"] = st.text_input(f"Studienschwerpunkte #{idx+1}", value=ausbildung_item.get("schwerpunkte", ""), key=f"schwerpunkte_demo_{idx}")
-                    
-                    # Steuerelemente zum Ändern der Reihenfolge
-                    st.markdown("##### Position anpassen")
-                    cols = st.columns([1, 1, 3])
-                    with cols[0]:
-                        if st.button("↑", key=f"edu_up_{idx}", help="Nach oben verschieben", use_container_width=True):
-                            move_edu_up(idx)
-                    with cols[1]:
-                        if st.button("↓", key=f"edu_down_{idx}", help="Nach unten verschieben", use_container_width=True):
-                            move_edu_down(idx)
+                    edu_data["schwerpunkte"] = st.text_input(f"Studienschwerpunkte #{idx+1}", value=ausbildung.get("schwerpunkte", ""), key=f"schwerpunkte_demo_{idx}")
                     
                     # Option zum Löschen dieser Ausbildung
                     include = st.checkbox(f"Diese Ausbildung einbeziehen", value=True, key=f"edu_demo_{idx}")
@@ -1366,51 +1177,10 @@ if st.session_state.step == 1:
             # Weiterbildung
             st.markdown("### Weiterbildung")
             
-            # Sortieroptionen für Weiterbildung
-            training_sort_col1, training_sort_col2 = st.columns([3, 1])
-            with training_sort_col1:
-                st.markdown("**Sortierung der Weiterbildungen:**")
-            with training_sort_col2:
-                training_sort_order = st.selectbox(
-                    "Reihenfolge",
-                    options=["Neueste zuerst", "Älteste zuerst"],
-                    index=0,
-                    key="training_sort_order"
-                )
-            
             # Liste für editierte Weiterbildungen
             edited_training = []
             
-            # Sortiere Weiterbildungen nach Zeitraum
-            weiterbildungen = profile_data.get("weiterbildungen", [])
-            if training_sort_order == "Neueste zuerst":
-                weiterbildungen = sort_by_time_period(weiterbildungen, reverse=True)
-            else:
-                weiterbildungen = sort_by_time_period(weiterbildungen, reverse=False)
-            
-            # Weiterbildungen nach Sortierung in der Session speichern, wenn noch nicht vorhanden
-            if 'weiterbildung_items' not in st.session_state:
-                st.session_state.weiterbildung_items = weiterbildungen
-            else:
-                # Nur aktualisieren, wenn Sortierung geändert wurde
-                if training_sort_order != st.session_state.get('training_sort_order_last', ''):
-                    st.session_state.weiterbildung_items = weiterbildungen
-                    st.session_state.training_sort_order_last = training_sort_order
-            
-            # Funktion zum Verschieben eines Elements nach oben
-            def move_training_up(index):
-                if index > 0:
-                    st.session_state.weiterbildung_items[index], st.session_state.weiterbildung_items[index-1] = st.session_state.weiterbildung_items[index-1], st.session_state.weiterbildung_items[index]
-                    st.rerun()
-            
-            # Funktion zum Verschieben eines Elements nach unten
-            def move_training_down(index):
-                if index < len(st.session_state.weiterbildung_items) - 1:
-                    st.session_state.weiterbildung_items[index], st.session_state.weiterbildung_items[index+1] = st.session_state.weiterbildung_items[index+1], st.session_state.weiterbildung_items[index]
-                    st.rerun()
-            
-            # Weiterbildungen aus der Session verwenden
-            for idx, weiterbildung in enumerate(st.session_state.weiterbildung_items):
+            for idx, weiterbildung in enumerate(profile_data.get("weiterbildungen", [])):
                 with st.expander(f"{weiterbildung.get('zeitraum', 'Neue Weiterbildung')}: {weiterbildung.get('bezeichnung', '')}", expanded=False):
                     training_data = {}
                     col1, col2 = st.columns(2)
@@ -1420,16 +1190,6 @@ if st.session_state.step == 1:
                         training_data["bezeichnung"] = st.text_input(f"Bezeichnung #{idx+1}", value=weiterbildung.get("bezeichnung", ""), key=f"bezeichnung_demo_{idx}")
                     
                     training_data["abschluss"] = st.text_input(f"Abschluss (Weiterbildung) #{idx+1}", value=weiterbildung.get("abschluss", ""), key=f"weiter_abschluss_demo_{idx}")
-                    
-                    # Steuerelemente zum Ändern der Reihenfolge
-                    st.markdown("##### Position anpassen")
-                    cols = st.columns([1, 1, 3])
-                    with cols[0]:
-                        if st.button("↑", key=f"training_up_{idx}", help="Nach oben verschieben", use_container_width=True):
-                            move_training_up(idx)
-                    with cols[1]:
-                        if st.button("↓", key=f"training_down_{idx}", help="Nach unten verschieben", use_container_width=True):
-                            move_training_down(idx)
                     
                     # Option zum Löschen dieser Weiterbildung
                     include = st.checkbox(f"Diese Weiterbildung einbeziehen", value=True, key=f"train_demo_{idx}")
@@ -1562,13 +1322,8 @@ if st.session_state.step == 1:
                         profile_path = generator.generate_profile(edited_data_to_use, output_path, template=template_to_use)
                         st.session_state.preview_pdf = profile_path
                         
-                        # Vergewissere, dass die PDF-Datei existiert
-                        if os.path.exists(profile_path) and os.path.getsize(profile_path) > 0:
-                            # Zeige eine Erfolgsmeldung an
-                            st.success("Profil erfolgreich generiert!")
-                        else:
-                            st.error("Die generierte PDF konnte nicht gefunden werden oder ist leer.", icon="🚫")
-                            st.session_state.preview_pdf = None
+                        # Zeige eine Erfolgsmeldung an
+                        st.success("Profil erfolgreich generiert!")
                         
                         # Speichere das ausgewählte Template für zukünftige Aktualisierungen
                         st.session_state.selected_template = template_to_use
@@ -1580,26 +1335,8 @@ if st.session_state.step == 1:
                 st.markdown("#### Profil-Vorschau")
                 # Prüfen ob die Datei existiert, bevor wir versuchen sie anzuzeigen
                 if st.session_state.preview_pdf and os.path.exists(st.session_state.preview_pdf):
-                    # PDF-Vorschau anzeigen mit verbesserter Methode
-                    # Die neue display_pdf Funktion zeigt die PDF direkt an oder liefert None zurück
-                    display_result = display_pdf(st.session_state.preview_pdf)
-                    
-                    # Wenn die PDF nicht angezeigt werden konnte, zeige zusätzliche Hilfe an
-                    if display_result is None:
-                        st.warning("Die PDF-Vorschau konnte nicht vollständig angezeigt werden. Sie können die PDF aber trotzdem herunterladen.", icon="⚠️")
-                        
-                        # Biete Download-Button als Alternative an
-                        try:
-                            with open(st.session_state.preview_pdf, "rb") as file:
-                                st.download_button(
-                                    label="PDF direkt herunterladen",
-                                    data=file,
-                                    file_name="Profil.pdf",
-                                    mime="application/pdf",
-                                    key="direct_download_pdf"
-                                )
-                        except Exception as e:
-                            st.error(f"Fehler beim Laden der PDF: {str(e)}", icon="🚫")
+                    pdf_display = display_pdf(st.session_state.preview_pdf)
+                    st.markdown(pdf_display, unsafe_allow_html=True)
                 else:
                     st.error("Die PDF-Vorschau ist nicht verfügbar. Bitte generieren Sie die Vorschau erneut.")
                 
@@ -1828,7 +1565,7 @@ if st.session_state.step == 1:
                                     st.session_state.profile_image_path = img_path
                                     st.session_state.temp_files.append(img_path)
                                     st.session_state.profile_image = profile_image
-                            
+                        
                         # Führerschein und Wunschgehalt
                         col1, col2 = st.columns(2)
                         with col1:
@@ -1902,8 +1639,6 @@ if st.session_state.step == 1:
                                 email = "gl@galdora.de"
                             elif selected_ansprechpartner == "Konrad Ruszczyk":
                                 email = "konrad@galdora.de"
-                            elif selected_ansprechpartner == "Alessandro Böhm":
-                                email = "boehm@galdora.de"  # Korrigierter E-Mail mit "oe" statt "ö"
                             else:
                                 # Standard E-Mail-Format für andere Ansprechpartner
                                 nachname = selected_ansprechpartner.split()[-1]
@@ -1926,59 +1661,18 @@ if st.session_state.step == 1:
                         # Berufserfahrung
                         st.markdown("### Berufserfahrung")
                         
-                        # Sortieroptionen für Berufserfahrung
-                        exp_sort_col1, exp_sort_col2 = st.columns([3, 1])
-                        with exp_sort_col1:
-                            st.markdown("**Sortierung der Berufserfahrungen:**")
-                        with exp_sort_col2:
-                            exp_sort_order = st.selectbox(
-                                "Reihenfolge",
-                                options=["Neueste zuerst", "Älteste zuerst"],
-                                index=0,
-                                key="exp_sort_order"
-                            )
-                        
                         # Liste für editierte Berufserfahrungen
                         edited_experience = []
                         
-                        # Sortiere Berufserfahrungen nach Zeitraum
-                        berufserfahrung = profile_data.get("berufserfahrung", [])
-                        if exp_sort_order == "Neueste zuerst":
-                            berufserfahrung = sort_by_time_period(berufserfahrung, reverse=True)
-                        else:
-                            berufserfahrung = sort_by_time_period(berufserfahrung, reverse=False)
-                        
-                        # Berufserfahrungen nach Sortierung in der Session speichern, wenn noch nicht vorhanden
-                        if 'berufserfahrung_items' not in st.session_state:
-                            st.session_state.berufserfahrung_items = berufserfahrung
-                        else:
-                            # Nur aktualisieren, wenn Sortierung geändert wurde
-                            if exp_sort_order != st.session_state.get('exp_sort_order_last', ''):
-                                st.session_state.berufserfahrung_items = berufserfahrung
-                                st.session_state.exp_sort_order_last = exp_sort_order
-                        
-                        # Funktion zum Verschieben eines Elements nach oben
-                        def move_exp_up(index):
-                            if index > 0:
-                                st.session_state.berufserfahrung_items[index], st.session_state.berufserfahrung_items[index-1] = st.session_state.berufserfahrung_items[index-1], st.session_state.berufserfahrung_items[index]
-                                st.rerun()
-                        
-                        # Funktion zum Verschieben eines Elements nach unten
-                        def move_exp_down(index):
-                            if index < len(st.session_state.berufserfahrung_items) - 1:
-                                st.session_state.berufserfahrung_items[index], st.session_state.berufserfahrung_items[index+1] = st.session_state.berufserfahrung_items[index+1], st.session_state.berufserfahrung_items[index]
-                                st.rerun()
-                        
-                        # Berufserfahrungen aus der Session verwenden
-                        for idx, erfahrung in enumerate(st.session_state.berufserfahrung_items):
+                        for idx, erfahrung in enumerate(profile_data.get("berufserfahrung", [])):
                             with st.expander(f"{erfahrung.get('zeitraum', 'Neue Erfahrung')}: {erfahrung.get('position', '')} bei {erfahrung.get('unternehmen', '')}", expanded=False):
                                 exp_data = {}
                                 col1, col2 = st.columns(2)
                                 with col1:
-                                    exp_data["zeitraum"] = st.text_input(f"Zeitraum #{idx+1}", value=erfahrung.get("zeitraum", ""), key=f"zeit_demo_{idx}")
-                                    exp_data["unternehmen"] = st.text_input(f"Unternehmen #{idx+1}", value=erfahrung.get("unternehmen", ""), key=f"unternehmen_demo_{idx}")
+                                    exp_data["zeitraum"] = st.text_input(f"Zeitraum #{idx+1}", value=erfahrung.get("zeitraum", ""))
+                                    exp_data["unternehmen"] = st.text_input(f"Unternehmen #{idx+1}", value=erfahrung.get("unternehmen", ""))
                                 with col2:
-                                    exp_data["position"] = st.text_input(f"Position #{idx+1}", value=erfahrung.get("position", ""), key=f"position_demo_{idx}")
+                                    exp_data["position"] = st.text_input(f"Position #{idx+1}", value=erfahrung.get("position", ""))
                                 
                                 # Aufgaben als Textarea mit einer Aufgabe pro Zeile
                                 aufgaben_text = "\n".join(erfahrung.get("aufgaben", []))
@@ -1989,16 +1683,6 @@ if st.session_state.step == 1:
                                 )
                                 # Aufgaben zurück in eine Liste konvertieren
                                 exp_data["aufgaben"] = [task.strip() for task in new_aufgaben.split("\n") if task.strip()]
-                                
-                                # Steuerelemente zum Ändern der Reihenfolge
-                                st.markdown("##### Position anpassen")
-                                cols = st.columns([1, 1, 3])
-                                with cols[0]:
-                                    if st.button("↑", key=f"exp_up_{idx}", help="Nach oben verschieben", use_container_width=True):
-                                        move_exp_up(idx)
-                                with cols[1]:
-                                    if st.button("↓", key=f"exp_down_{idx}", help="Nach unten verschieben", use_container_width=True):
-                                        move_exp_down(idx)
                                 
                                 # Option zum Löschen dieser Berufserfahrung
                                 include = st.checkbox(f"Diese Berufserfahrung einbeziehen", value=True, key=f"exp_{idx}")
@@ -2028,72 +1712,21 @@ if st.session_state.step == 1:
                         # Ausbildung
                         st.markdown("### Ausbildung")
                         
-                        # Sortieroptionen für Ausbildung
-                        edu_sort_col1, edu_sort_col2 = st.columns([3, 1])
-                        with edu_sort_col1:
-                            st.markdown("**Sortierung der Ausbildungen:**")
-                        with edu_sort_col2:
-                            edu_sort_order = st.selectbox(
-                                "Reihenfolge",
-                                options=["Neueste zuerst", "Älteste zuerst"],
-                                index=0,
-                                key="edu_sort_order"
-                            )
-                        
                         # Liste für editierte Ausbildungen
                         edited_education = []
                         
-                        # Sortiere Ausbildungen nach Zeitraum
-                        ausbildung = profile_data.get("ausbildung", [])
-                        if edu_sort_order == "Neueste zuerst":
-                            ausbildung = sort_by_time_period(ausbildung, reverse=True)
-                        else:
-                            ausbildung = sort_by_time_period(ausbildung, reverse=False)
-                        
-                        # Ausbildungen nach Sortierung in der Session speichern, wenn noch nicht vorhanden
-                        if 'ausbildung_items' not in st.session_state:
-                            st.session_state.ausbildung_items = ausbildung
-                        else:
-                            # Nur aktualisieren, wenn Sortierung geändert wurde
-                            if edu_sort_order != st.session_state.get('edu_sort_order_last', ''):
-                                st.session_state.ausbildung_items = ausbildung
-                                st.session_state.edu_sort_order_last = edu_sort_order
-                        
-                        # Funktion zum Verschieben eines Elements nach oben
-                        def move_edu_up(index):
-                            if index > 0:
-                                st.session_state.ausbildung_items[index], st.session_state.ausbildung_items[index-1] = st.session_state.ausbildung_items[index-1], st.session_state.ausbildung_items[index]
-                                st.rerun()
-                        
-                        # Funktion zum Verschieben eines Elements nach unten
-                        def move_edu_down(index):
-                            if index < len(st.session_state.ausbildung_items) - 1:
-                                st.session_state.ausbildung_items[index], st.session_state.ausbildung_items[index+1] = st.session_state.ausbildung_items[index+1], st.session_state.ausbildung_items[index]
-                                st.rerun()
-                        
-                        # Ausbildungen aus der Session verwenden
-                        for idx, ausbildung_item in enumerate(st.session_state.ausbildung_items):
-                            with st.expander(f"{ausbildung_item.get('zeitraum', 'Neue Ausbildung')}: {ausbildung_item.get('abschluss', '')} - {ausbildung_item.get('institution', '')}", expanded=False):
+                        for idx, ausbildung in enumerate(profile_data.get("ausbildung", [])):
+                            with st.expander(f"{ausbildung.get('zeitraum', 'Neue Ausbildung')}: {ausbildung.get('abschluss', '')} - {ausbildung.get('institution', '')}", expanded=False):
                                 edu_data = {}
                                 col1, col2 = st.columns(2)
                                 with col1:
-                                    edu_data["zeitraum"] = st.text_input(f"Zeitraum (Ausbildung) #{idx+1}", value=ausbildung_item.get("zeitraum", ""), key=f"edu_zeit_demo_{idx}")
-                                    edu_data["institution"] = st.text_input(f"Institution #{idx+1}", value=ausbildung_item.get("institution", ""), key=f"institution_demo_{idx}")
+                                    edu_data["zeitraum"] = st.text_input(f"Zeitraum (Ausbildung) #{idx+1}", value=ausbildung.get("zeitraum", ""))
+                                    edu_data["institution"] = st.text_input(f"Institution #{idx+1}", value=ausbildung.get("institution", ""))
                                 with col2:
-                                    edu_data["abschluss"] = st.text_input(f"Abschluss #{idx+1}", value=ausbildung_item.get("abschluss", ""), key=f"abschluss_demo_{idx}")
-                                    edu_data["note"] = st.text_input(f"Note #{idx+1}", value=ausbildung_item.get("note", ""), key=f"note_demo_{idx}")
+                                    edu_data["abschluss"] = st.text_input(f"Abschluss #{idx+1}", value=ausbildung.get("abschluss", ""))
+                                    edu_data["note"] = st.text_input(f"Note #{idx+1}", value=ausbildung.get("note", ""))
                                 
-                                edu_data["schwerpunkte"] = st.text_input(f"Studienschwerpunkte #{idx+1}", value=ausbildung_item.get("schwerpunkte", ""), key=f"schwerpunkte_demo_{idx}")
-                                
-                                # Steuerelemente zum Ändern der Reihenfolge
-                                st.markdown("##### Position anpassen")
-                                cols = st.columns([1, 1, 3])
-                                with cols[0]:
-                                    if st.button("↑", key=f"edu_up_{idx}", help="Nach oben verschieben", use_container_width=True):
-                                        move_edu_up(idx)
-                                with cols[1]:
-                                    if st.button("↓", key=f"edu_down_{idx}", help="Nach unten verschieben", use_container_width=True):
-                                        move_edu_down(idx)
+                                edu_data["schwerpunkte"] = st.text_input(f"Studienschwerpunkte #{idx+1}", value=ausbildung.get("schwerpunkte", ""))
                                 
                                 # Option zum Löschen dieser Ausbildung
                                 include = st.checkbox(f"Diese Ausbildung einbeziehen", value=True, key=f"edu_{idx}")
@@ -2120,70 +1753,19 @@ if st.session_state.step == 1:
                         # Weiterbildung
                         st.markdown("### Weiterbildung")
                         
-                        # Sortieroptionen für Weiterbildung
-                        training_sort_col1, training_sort_col2 = st.columns([3, 1])
-                        with training_sort_col1:
-                            st.markdown("**Sortierung der Weiterbildungen:**")
-                        with training_sort_col2:
-                            training_sort_order = st.selectbox(
-                                "Reihenfolge",
-                                options=["Neueste zuerst", "Älteste zuerst"],
-                                index=0,
-                                key="training_sort_order"
-                            )
-                        
                         # Liste für editierte Weiterbildungen
                         edited_training = []
                         
-                        # Sortiere Weiterbildungen nach Zeitraum
-                        weiterbildungen = profile_data.get("weiterbildungen", [])
-                        if training_sort_order == "Neueste zuerst":
-                            weiterbildungen = sort_by_time_period(weiterbildungen, reverse=True)
-                        else:
-                            weiterbildungen = sort_by_time_period(weiterbildungen, reverse=False)
-                        
-                        # Weiterbildungen nach Sortierung in der Session speichern, wenn noch nicht vorhanden
-                        if 'weiterbildung_items' not in st.session_state:
-                            st.session_state.weiterbildung_items = weiterbildungen
-                        else:
-                            # Nur aktualisieren, wenn Sortierung geändert wurde
-                            if training_sort_order != st.session_state.get('training_sort_order_last', ''):
-                                st.session_state.weiterbildung_items = weiterbildungen
-                                st.session_state.training_sort_order_last = training_sort_order
-                        
-                        # Funktion zum Verschieben eines Elements nach oben
-                        def move_training_up(index):
-                            if index > 0:
-                                st.session_state.weiterbildung_items[index], st.session_state.weiterbildung_items[index-1] = st.session_state.weiterbildung_items[index-1], st.session_state.weiterbildung_items[index]
-                                st.rerun()
-                        
-                        # Funktion zum Verschieben eines Elements nach unten
-                        def move_training_down(index):
-                            if index < len(st.session_state.weiterbildung_items) - 1:
-                                st.session_state.weiterbildung_items[index], st.session_state.weiterbildung_items[index+1] = st.session_state.weiterbildung_items[index+1], st.session_state.weiterbildung_items[index]
-                                st.rerun()
-                        
-                        # Weiterbildungen aus der Session verwenden
-                        for idx, weiterbildung in enumerate(st.session_state.weiterbildung_items):
+                        for idx, weiterbildung in enumerate(profile_data.get("weiterbildungen", [])):
                             with st.expander(f"{weiterbildung.get('zeitraum', 'Neue Weiterbildung')}: {weiterbildung.get('bezeichnung', '')}", expanded=False):
                                 training_data = {}
                                 col1, col2 = st.columns(2)
                                 with col1:
-                                    training_data["zeitraum"] = st.text_input(f"Zeitraum (Weiterbildung) #{idx+1}", value=weiterbildung.get("zeitraum", ""), key=f"weiter_zeit_demo_{idx}")
+                                    training_data["zeitraum"] = st.text_input(f"Zeitraum (Weiterbildung) #{idx+1}", value=weiterbildung.get("zeitraum", ""))
                                 with col2:
-                                    training_data["bezeichnung"] = st.text_input(f"Bezeichnung #{idx+1}", value=weiterbildung.get("bezeichnung", ""), key=f"bezeichnung_demo_{idx}")
+                                    training_data["bezeichnung"] = st.text_input(f"Bezeichnung #{idx+1}", value=weiterbildung.get("bezeichnung", ""))
                                     
                                 training_data["abschluss"] = st.text_input(f"Abschluss (Weiterbildung) #{idx+1}", value=weiterbildung.get("abschluss", ""))
-                                
-                                # Steuerelemente zum Ändern der Reihenfolge
-                                st.markdown("##### Position anpassen")
-                                cols = st.columns([1, 1, 3])
-                                with cols[0]:
-                                    if st.button("↑", key=f"training_up_{idx}", help="Nach oben verschieben", use_container_width=True):
-                                        move_training_up(idx)
-                                with cols[1]:
-                                    if st.button("↓", key=f"training_down_{idx}", help="Nach unten verschieben", use_container_width=True):
-                                        move_training_down(idx)
                                 
                                 # Option zum Löschen dieser Weiterbildung
                                 include = st.checkbox(f"Diese Weiterbildung einbeziehen", value=True, key=f"train_{idx}")
@@ -2312,13 +1894,8 @@ if st.session_state.step == 1:
                                     profile_path = generator.generate_profile(edited_data_to_use, output_path, template=template_to_use)
                                     st.session_state.preview_pdf = profile_path
                                     
-                                    # Vergewissere, dass die PDF-Datei existiert
-                                    if os.path.exists(profile_path) and os.path.getsize(profile_path) > 0:
-                                        # Zeige eine Erfolgsmeldung an
-                                        st.success("Profil erfolgreich generiert!")
-                                    else:
-                                        st.error("Die generierte PDF konnte nicht gefunden werden oder ist leer.", icon="🚫")
-                                        st.session_state.preview_pdf = None
+                                    # Zeige eine Erfolgsmeldung an
+                                    st.success("Profil erfolgreich generiert!")
                                     
                                     # Speichere das ausgewählte Template für zukünftige Aktualisierungen
                                     st.session_state.selected_template = template_to_use
@@ -2330,26 +1907,8 @@ if st.session_state.step == 1:
                             st.markdown("#### Profil-Vorschau")
                             # Prüfen ob die Datei existiert, bevor wir versuchen sie anzuzeigen
                             if st.session_state.preview_pdf and os.path.exists(st.session_state.preview_pdf):
-                                # PDF-Vorschau anzeigen mit verbesserter Methode
-                                # Die neue display_pdf Funktion zeigt die PDF direkt an oder liefert None zurück
-                                display_result = display_pdf(st.session_state.preview_pdf)
-                                
-                                # Wenn die PDF nicht angezeigt werden konnte, zeige zusätzliche Hilfe an
-                                if display_result is None:
-                                    st.warning("Die PDF-Vorschau konnte nicht vollständig angezeigt werden. Sie können die PDF aber trotzdem herunterladen.", icon="⚠️")
-                                    
-                                    # Biete Download-Button als Alternative an
-                                    try:
-                                        with open(st.session_state.preview_pdf, "rb") as file:
-                                            st.download_button(
-                                                label="PDF direkt herunterladen",
-                                                data=file,
-                                                file_name="Profil.pdf",
-                                                mime="application/pdf",
-                                                key="direct_download_pdf2"
-                                            )
-                                    except Exception as e:
-                                        st.error(f"Fehler beim Laden der PDF: {str(e)}", icon="🚫")
+                                pdf_display = display_pdf(st.session_state.preview_pdf)
+                                st.markdown(pdf_display, unsafe_allow_html=True)
                             else:
                                 st.error("Die PDF-Vorschau ist nicht verfügbar. Bitte generieren Sie die Vorschau erneut.")
                             

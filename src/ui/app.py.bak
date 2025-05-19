@@ -49,6 +49,32 @@ def get_logo_as_base64():
         print(f"Error loading logo: {e}")
         return ""
 
+# Funktion zur Sortierung nach Zeitraum (für die chronologische Sortierung)
+def sort_by_time_period(items, reverse=False):
+    """
+    Sortiert eine Liste von Elementen nach dem 'zeitraum'-Feld.
+    
+    Args:
+        items: Liste von Dictionaries mit 'zeitraum'-Feld (Format 'MM/YYYY - MM/YYYY' oder 'MM/YYYY - heute')
+        reverse: Wenn True, wird in umgekehrter Reihenfolge sortiert (neueste zuerst)
+        
+    Returns:
+        Sortierte Liste von Elementen
+    """
+    def extract_year(time_period):
+        # Versuche, ein Jahr aus dem Zeitraum zu extrahieren
+        if not time_period:
+            return 0
+        
+        # Nehme das erste Jahr, das im String gefunden wird
+        years = re.findall(r'(\d{4})', time_period)
+        if years:
+            return int(years[0])
+        return 0
+    
+    # Sortiere die Liste nach dem extrahierten Jahr
+    return sorted(items, key=lambda x: extract_year(x.get('zeitraum', '')), reverse=reverse)
+
 # CSS für Farbverlaufshintergrund und weiße Schaltflächen
 custom_css = """
 <style>
@@ -566,8 +592,6 @@ if 'saved_api_key' not in st.session_state:
     st.session_state.saved_api_key = config.get_openai_api_key()
 if 'demo_mode' not in st.session_state:
     st.session_state.demo_mode = False
-if 'export_mode' not in st.session_state:
-    st.session_state.export_mode = False  # Verwendet für die Steuerung des Profil-Export-Schritts
 
 # Beispieldaten für den Demo-Modus
 DEMO_PROFILE_DATA = {
@@ -668,34 +692,52 @@ def reset_session():
     st.session_state.profile_data = {}
     st.session_state.edited_data = {}
     st.session_state.preview_pdf = None
-    st.session_state.export_mode = False  # Export-Modus zurücksetzen
-    # Temporäre Dateien aufräumen
-    if 'temp_files' in st.session_state:
-        for temp_file in st.session_state.temp_files:
+    
+    # Drag & Drop Session-Variablen zurücksetzen
+    if 'berufserfahrung_items' in st.session_state:
+        del st.session_state.berufserfahrung_items
+    if 'ausbildung_items' in st.session_state:
+        del st.session_state.ausbildung_items
+    if 'weiterbildung_items' in st.session_state:
+        del st.session_state.weiterbildung_items
+    
+    # Temporäre Dateien löschen
+    for temp_file in st.session_state.temp_files:
+        if os.path.exists(temp_file):
             try:
-                if os.path.exists(temp_file):
-                    os.unlink(temp_file)
+                os.remove(temp_file)
             except Exception as e:
-                print(f"Fehler beim Löschen von Temp-Datei: {str(e)}")
-        st.session_state.temp_files = []
-    else:
-        # Initialisiere temp_files, falls es noch nicht existiert
-        st.session_state.temp_files = []
-    # Demo-Modus zurücksetzen
-    st.session_state.demo_mode = False
+                print(f"Fehler beim Löschen von {temp_file}: {e}")
+    
+    # Temporäre Dateiliste leeren
+    st.session_state.temp_files = []
+
+# Funktion für Home.py - leitet zu Konverter-Seite weiter
+# HINWEIS: Diese app.py und die 01_Konverter.py sind funktional identisch.
+# Die Hauptfunktionalität sollte langfristig in der Konverter-Seite bleiben,
+# und diese app.py könnte entfernt oder vereinfacht werden.
+def run_main_app():
+    """Hauptfunktion zum Ausführen der App, wird von Home.py aufgerufen"""
+    # Leite zur Konverter-Seite weiter, da dort die Hauptfunktionalität liegt
+    st.markdown("""
+    <meta http-equiv="refresh" content="0;URL='/Konverter'" />
+    <p>Weiterleitung zur Konverter-Seite...</p>
+    """, unsafe_allow_html=True)
 
 def display_pdf(file_path):
-    """Zeigt ein PDF als Base64-String an"""
+    """Zeigt ein PDF im Browser an, funktioniert sowohl lokal als auch auf Streamlit Cloud"""
     # Prüfe, ob ein gültiger Dateipfad vorhanden ist
     if file_path is None:
         # Zeige eine Fehlermeldung statt des PDFs an
         print("Fehler: PDF-Pfad ist None")
-        return '<div style="text-align: center; padding: 20px; background-color: #f8d7da; color: #721c24; border-radius: 5px;">PDF-Vorschau nicht verfügbar. Bitte aktualisieren Sie die Vorschau.</div>'
+        st.error("PDF-Vorschau nicht verfügbar. Bitte aktualisieren Sie die Vorschau.", icon="🚫")
+        return None
     
     # Prüfe, ob die Datei existiert
     if not os.path.exists(file_path):
         print(f"Fehler: PDF-Datei existiert nicht: {file_path}")
-        return '<div style="text-align: center; padding: 20px; background-color: #f8d7da; color: #721c24; border-radius: 5px;">PDF-Datei existiert nicht. Bitte generieren Sie die Vorschau erneut.</div>'
+        st.error(f"PDF-Datei existiert nicht: {file_path}", icon="🚫")
+        return None
     
     try:
         # Prüfe, ob die Datei eine gültige PDF-Datei ist
@@ -704,29 +746,69 @@ def display_pdf(file_path):
             # Prüfe auf PDF-Signatur (%PDF-)
             if not file_content.startswith(b'%PDF-'):
                 print(f"Fehler: Keine gültige PDF-Datei: {file_path}")
-                return '<div style="text-align: center; padding: 20px; background-color: #f8d7da; color: #721c24; border-radius: 5px;">Die Datei ist keine gültige PDF-Datei. Bitte generieren Sie die Vorschau erneut.</div>'
+                st.error("Die Datei ist keine gültige PDF-Datei. Bitte generieren Sie die Vorschau erneut.", icon="🚫")
+                return None
             
             base64_pdf = base64.b64encode(file_content).decode('utf-8')
         
-        # Alternative PDF-Anzeige, die besser mit Chrome-Sicherheitsrichtlinien kompatibel ist
-        pdf_display = f'''
-        <div style="display: flex; justify-content: center; width: 100%; margin: 0 auto; border: 1px solid #ddd; border-radius: 5px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-            <object 
-                data="data:application/pdf;base64,{base64_pdf}" 
-                type="application/pdf"
+        # Zwei Methoden zur PDF-Anzeige: direkt über Streamlit oder über HTML
+
+        # Methode 1: Streamlit PDF-Anzeige
+        try:
+            # Versuche, die PDF direkt über Streamlit anzuzeigen
+            st.download_button(
+                label="PDF herunterladen",
+                data=file_content,
+                file_name="profil.pdf",
+                mime="application/pdf",
+            )
+            
+            # Einbetten des PDFs in ein iframe mit responsivem Design
+            pdf_display = f"""
+            <iframe 
+                src="data:application/pdf;base64,{base64_pdf}" 
                 width="100%" 
-                height="800"
-                style="border: none;">
-                <p>Ihr Browser kann PDFs nicht anzeigen. 
-                <a href="data:application/pdf;base64,{base64_pdf}" download="dokument.pdf">Klicken Sie hier, um das PDF herunterzuladen</a>.</p>
-            </object>
-        </div>
-        '''
-        return pdf_display
+                height="800" 
+                style="border: none; border-radius: 5px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+            </iframe>
+            """
+            st.markdown(pdf_display, unsafe_allow_html=True)
+            return True
+        
+        except Exception as iframe_error:
+            print(f"Fehler bei der iframe-Methode: {str(iframe_error)}")
+            
+            # Fallback-Methode: object tag
+            pdf_display = f"""
+            <div style="display: flex; justify-content: center; width: 100%; margin: 0 auto; border: 1px solid #ddd; 
+                        border-radius: 5px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                <object 
+                    data="data:application/pdf;base64,{base64_pdf}" 
+                    type="application/pdf"
+                    width="100%" 
+                    height="800"
+                    style="border: none;">
+                    <div style="text-align: center; padding: 20px;">
+                        <p>Ihr Browser kann PDFs nicht direkt anzeigen.</p>
+                        <a href="data:application/pdf;base64,{base64_pdf}" 
+                           download="profil.pdf" 
+                           style="display: inline-block; background: rgba(255,255,255,0.2); 
+                                  color: white; padding: 10px 20px; border-radius: 8px; 
+                                  text-decoration: none; margin-top: 15px;">
+                            PDF herunterladen
+                        </a>
+                    </div>
+                </object>
+            </div>
+            """
+            st.markdown(pdf_display, unsafe_allow_html=True)
+            return True
+            
     except Exception as e:
         # Zeige eine Fehlermeldung bei sonstigen Problemen
         print(f"Fehler beim Laden der PDF-Vorschau: {str(e)}, Pfad: {file_path}")
-        return f'<div style="text-align: center; padding: 20px; background-color: #f8d7da; color: #721c24; border-radius: 5px;">Fehler beim Laden der PDF-Vorschau: {str(e)}</div>'
+        st.error(f"Fehler beim Laden der PDF-Vorschau: {str(e)}", icon="🚫")
+        return None
 
 # Seitentitel und Konfiguration
 st.set_page_config(page_title="CV2Profile Konverter", layout="wide")
@@ -752,59 +834,9 @@ st.markdown("""
 with st.sidebar:
     st.header("Einstellungen")
     
-    # Fortschrittsliste hinzufügen
-    st.subheader("Fortschritt")
-    
-    # Hier definieren wir die drei Schritte mit Icons und Formatierungen
-    steps = [
-        "📄 1. Datei hochladen",
-        "✏️ 2. Daten bearbeiten",
-        "🔄 3. Profil exportieren"
-    ]
-    
-    # Bestimme den aktuellen Schritt basierend auf der Session
-    current_step = 1
-    if st.session_state.step == 1:
-        if 'profile_data' in st.session_state and st.session_state.profile_data:
-            if st.session_state.export_mode:
-                current_step = 3
-            else:
-                current_step = 2
-        else:
-            current_step = 1
-    
-    # Erstelle eine visuelle Fortschrittsanzeige
-    for i, step in enumerate(steps, 1):
-        if i < current_step:
-            # Bereits abgeschlossen (grün und fett)
-            st.markdown(f"""
-            <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                <div style="background-color: #28a745; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; margin-right: 10px;">✓</div>
-                <span style="color: #28a745; font-weight: 600;">{step}</span>
-            </div>
-            """, unsafe_allow_html=True)
-        elif i == current_step:
-            # Aktueller Schritt (blau und fett)
-            st.markdown(f"""
-            <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                <div style="background-color: #007bff; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; margin-right: 10px;">{i}</div>
-                <span style="color: #007bff; font-weight: 600;">{step}</span>
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            # Noch nicht erreicht (grau)
-            st.markdown(f"""
-            <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                <div style="background-color: #6c757d; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; margin-right: 10px;">{i}</div>
-                <span style="color: #6c757d;">{step}</span>
-            </div>
-            """, unsafe_allow_html=True)
-    
-    st.divider()
-    
-    # Link zur Einstellungsseite
+    # Link zur Einstellungsseite mit korrektem Pfad
     st.markdown("""
-    <a href="/01_Settings" target="_self" style="text-decoration: none;">
+    <a href="/02_⚙️_Einstellungen" target="_self" style="text-decoration: none;">
         <div style="background: rgba(255, 255, 255, 0.15); padding: 10px 15px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); border: 1px solid rgba(255, 255, 255, 0.1);">
             <span style="font-size: 24px; margin-right: 10px;">⚙️</span>
             <span style="color: white; font-weight: 500;">Einstellungen öffnen</span>
@@ -831,33 +863,72 @@ with st.sidebar:
         # Seite neu laden, um die Änderungen anzuzeigen
         st.rerun()
     
-    # Lade den gespeicherten API-Key oder verwende den leeren String
-    api_key_value = st.session_state.saved_api_key
-
-    # API-Key Eingabefeld
-    api_key_input = st.text_input("OpenAI API Key", 
-                                 value=api_key_value,
-                                 type="password",
-                                 help="Dein OpenAI API-Key wird benötigt, um Lebensläufe zu analysieren.",
-                                 disabled=st.session_state.demo_mode)
-
-    # Option zum Speichern des API-Keys (nur wenn nicht im Demo-Modus)
-    if api_key_input and not st.session_state.demo_mode:
-        if api_key_input != st.session_state.saved_api_key:
-            save_key = st.checkbox("API-Key für zukünftige Sitzungen speichern", value=True,
-                                  help="Der API-Key wird lokal auf deinem Computer gespeichert.")
-            
-            if save_key and st.button("API-Key speichern"):
-                # Speichere den API-Key
-                config.save_openai_api_key(api_key_input)
-                st.session_state.saved_api_key = api_key_input
-                st.success("API-Key erfolgreich gespeichert!")
-
-    # Zeige Warnung an, wenn kein API-Key vorhanden ist und nicht im Demo-Modus
-    if not api_key_input and not st.session_state.demo_mode:
-        st.warning("Bitte gib deinen OpenAI API Key ein")
-    elif st.session_state.demo_mode:
-        st.info("Im Demo-Modus wird kein OpenAI API Key benötigt")
+    # Statusleiste für den aktuellen Arbeitsschritt
+    st.divider()
+    st.subheader("Status")
+    
+    # Aktuelle Schritte bestimmen
+    current_step = st.session_state.step
+    steps = {
+        1: "Datei hochladen", 
+        2: "Daten bearbeiten", 
+        3: "Profil exportieren"
+    }
+    
+    # Statusleiste anzeigen
+    st.markdown("""
+    <style>
+        .status-step {
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 8px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+        }
+        .active-step {
+            background-color: rgba(76, 175, 80, 0.3);
+            border-left: 4px solid #4CAF50;
+        }
+        .completed-step {
+            background-color: rgba(76, 175, 80, 0.1);
+            border-left: 4px solid rgba(76, 175, 80, 0.4);
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .pending-step {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-left: 4px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.5);
+        }
+        .step-icon {
+            margin-right: 8px;
+            font-size: 16px;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    for step_num, step_name in steps.items():
+        if step_num < current_step:
+            # Abgeschlossener Schritt
+            st.markdown(f"""
+            <div class="status-step completed-step">
+                <span class="step-icon">✓</span> {step_num}. {step_name}
+            </div>
+            """, unsafe_allow_html=True)
+        elif step_num == current_step:
+            # Aktueller Schritt
+            st.markdown(f"""
+            <div class="status-step active-step">
+                <span class="step-icon">▶</span> {step_num}. {step_name}
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            # Ausstehender Schritt
+            st.markdown(f"""
+            <div class="status-step pending-step">
+                <span class="step-icon">○</span> {step_num}. {step_name}
+            </div>
+            """, unsafe_allow_html=True)
     
     # Allgemeine Einstellungen
     st.divider()
@@ -922,192 +993,48 @@ with st.sidebar:
         reset_session()
         st.rerun()
 
-# Verwende den gespeicherten API-Key oder den eingegebenen API-Key
-openai_api_key = api_key_input or st.session_state.saved_api_key
+# Verwende den gespeicherten API-Key aus der Projektkonfiguration
+openai_api_key = config.get_openai_api_key()
 
 # Hauptbereich - basierend auf dem aktuellen Schritt
 if st.session_state.step == 1:
     # Schritt 1: Datei hochladen und Text extrahieren/analysieren
+    st.subheader("1. Lebenslauf hochladen und verarbeiten")
     
-    # Prüfe, ob wir im Export-Modus sind
-    if st.session_state.export_mode:
-        # Zeige den Profil-Export-Bereich an
-        st.subheader("3. Profil exportieren")
+    # Wenn Demo-Modus aktiv ist
+    if st.session_state.demo_mode:
+        # Banner anzeigen, dass Demo-Modus aktiv ist
+        st.info("🚀 Demo-Modus ist aktiv. Keine API-Schlüssel oder Datei-Upload erforderlich.")
         
-        # Profildaten aus der Session holen oder aus den aktuellen bearbeiteten Daten
-        edited_data_to_use = st.session_state.edited_data
+        # Profildaten und extrahierten Text aus den vordefinierten Demo-Daten setzen
+        profile_data = DEMO_PROFILE_DATA
+        extracted_text = DEMO_EXTRACTED_TEXT
         
-        # Vorlage auswählen
-        st.markdown("#### Vorlage auswählen")
+        # Erfolgsmeldung nach der "Analyse" anzeigen
+        st.success("Der Lebenslauf wurde erfolgreich analysiert!")
         
-        # Standard-Vorlage aus der Konfiguration holen
-        default_template = config.get_all_settings().get("default_template", "professional")
-        
-        # Template-Auswahl als Variable speichern
-        template_to_use = default_template
-        
-        # Vorlagenauswahl mit Standard-Voreinstellung
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            classic = st.button("🔵 🔵\nKlassisch", 
-                                use_container_width=True, 
-                                type="primary" if default_template == "classic" else "secondary",
-                                key="classic_export")
-            if classic:
-                template_to_use = "classic"
-                # Automatisch Vorschau aktualisieren, wenn Template geändert wird
-                st.session_state.update_preview = True
-                
-        with col2:
-            modern = st.button("🟢 🟢\nModern", 
-                            use_container_width=True,
-                            type="primary" if default_template == "modern" else "secondary",
-                            key="modern_export")
-            if modern:
-                template_to_use = "modern"
-                # Automatisch Vorschau aktualisieren, wenn Template geändert wird
-                st.session_state.update_preview = True
-                
-        with col3:
-            professional = st.button("🟣 🟣\nProfessionell", 
-                                use_container_width=True,
-                                type="primary" if default_template == "professional" else "secondary",
-                                key="professional_export")
-            if professional:
-                template_to_use = "professional"
-                # Automatisch Vorschau aktualisieren, wenn Template geändert wird
-                st.session_state.update_preview = True
-                
-        with col4:
-            minimalistic = st.button("⚫ ⚫\nMinimalistisch", 
-                                use_container_width=True,
-                                type="primary" if default_template == "minimalist" else "secondary",
-                                key="minimalistic_export")
-            if minimalistic:
-                template_to_use = "minimalist"
-                # Automatisch Vorschau aktualisieren, wenn Template geändert wird
-                st.session_state.update_preview = True
-        
-        # Profil-Vorschau generieren und anzeigen
-        if 'preview_pdf' not in st.session_state or st.button("Vorschau aktualisieren", key="update_preview_export") or st.session_state.get('update_preview', False):
-            # Reset des Update-Flags
-            st.session_state.update_preview = False
-            with st.spinner("Profil wird generiert..."):
-                try:
-                    generator = ProfileGenerator()
-                    output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-                    output_path = output_file.name
-                    output_file.close()
-                    st.session_state.temp_files.append(output_path)
-                    
-                    # Generiere Profil mit dem ausgewählten Template
-                    profile_path = generator.generate_profile(edited_data_to_use, output_path, template=template_to_use)
-                    st.session_state.preview_pdf = profile_path
-                    
-                    # Zeige eine Erfolgsmeldung an
-                    st.success("Profil erfolgreich generiert!")
-                    
-                    # Speichere das ausgewählte Template für zukünftige Aktualisierungen
-                    st.session_state.selected_template = template_to_use
-                except Exception as e:
-                    st.error(f"Fehler bei der Generierung des Profils: {str(e)}")
-        
-        # PDF-Vorschau anzeigen
-        if "preview_pdf" in st.session_state:
-            st.markdown("#### Profil-Vorschau")
-            # Prüfen ob die Datei existiert, bevor wir versuchen sie anzuzeigen
-            if st.session_state.preview_pdf and os.path.exists(st.session_state.preview_pdf):
-                pdf_display = display_pdf(st.session_state.preview_pdf)
-                st.markdown(pdf_display, unsafe_allow_html=True)
-            else:
-                st.error("Die PDF-Vorschau ist nicht verfügbar. Bitte generieren Sie die Vorschau erneut.")
-            
-            # Name für das Profil
-            name = edited_data_to_use["persönliche_daten"]["name"].replace(" ", "_")
-            if not name or name == "":
-                name = "Profil"
-            
-            # Auswahl des Formats mit RadioButtons
-            st.markdown("#### Format wählen")
-            format_option = st.radio(
-                "In welchem Format möchten Sie das Profil herunterladen?",
-                options=["PDF", "Word"],
-                horizontal=True,
-                key="format_choice_export"
-            )
-            
-            # Je nach Auswahl unterschiedlichen Download-Button anzeigen
-            if format_option == "PDF":
-                # PDF-Download
-                if st.session_state.preview_pdf and os.path.exists(st.session_state.preview_pdf):
-                    with open(st.session_state.preview_pdf, "rb") as file:
-                        st.download_button(
-                            label="Profil herunterladen",
-                            data=file,
-                            file_name=f"{name}_Profil.pdf",
-                            mime="application/pdf",
-                            key="download_pdf_export"
-                        )
-                else:
-                    st.error("Bitte generieren Sie zuerst eine Vorschau des Profils.")
-            else:
-                # Word-Dokument generieren und herunterladen
-                # Temporäre Datei für das Word-Dokument erstellen
-                output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".docx")
-                output_path = output_file.name
-                output_file.close()
-                st.session_state.temp_files.append(output_path)
-                
-                try:
-                    # Stelle sicher, dass generator definiert ist
-                    generator = ProfileGenerator()
-                    
-                    # Word-Dokument mit dem gleichen Generator erstellen
-                    docx_path = generator.generate_profile(
-                        edited_data_to_use, 
-                        output_path, 
-                        template=template_to_use,
-                        format="docx"
-                    )
-                    
-                    # Word-Dokument zum Download anbieten
-                    with open(docx_path, "rb") as file:
-                        st.download_button(
-                            label="Profil herunterladen",
-                            data=file,
-                            file_name=f"{name}_Profil.docx",
-                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                            key="download_word_export"
-                        )
-                except Exception as e:
-                    st.error(f"Fehler bei der Word-Dokument-Generierung: {str(e)}")
-        
-        # Button zum Zurückkehren zur Bearbeitung
-        if st.button("Zurück zur Bearbeitung", key="back_to_edit_button"):
-            st.session_state.export_mode = False
-            st.rerun()
-    else:
-        # Normaler Fluss - Schritt 1: Datei hochladen oder Demo-Modus
-        st.subheader("1. Lebenslauf hochladen und verarbeiten")
-        
-        # Wenn Demo-Modus aktiv ist
-        if st.session_state.demo_mode:
-            # Banner anzeigen, dass Demo-Modus aktiv ist
-            st.info("🚀 Demo-Modus ist aktiv. Keine API-Schlüssel oder Datei-Upload erforderlich.")
-            
-            # Profildaten und extrahierten Text aus den vordefinierten Demo-Daten setzen
-            profile_data = DEMO_PROFILE_DATA
-            extracted_text = DEMO_EXTRACTED_TEXT
-            
-            # Erfolgsmeldung nach der "Analyse" anzeigen
-            st.success("Der Lebenslauf wurde erfolgreich analysiert!")
-            
-            # Springe zu Schritt 2
-            st.subheader("2. Profil erstellen und exportieren")
+        # Springe zu Schritt 2
+        st.subheader("2. Profil erstellen und exportieren")
 
-            # Profildaten aus der Session holen
-            edited_data = {}
+        # Profildaten aus der Session holen
+        edited_data = {}
 
+        # Zwei Tabs erstellen für Informationsauswahl und Profil-Generierung mit verbessertem Stil
+        st.markdown("""
+        <style>
+            .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] {
+                background-color: rgba(255, 255, 255, 0.2) !important;
+                color: white !important;
+                font-weight: 600 !important;
+            }
+            .stTabs [data-baseweb="tab-list"] button {
+                padding: 10px 20px !important;
+            }
+        </style>
+        """, unsafe_allow_html=True)
+        tab1, tab2 = st.tabs(["Informationen bearbeiten", "Profil exportieren"])
+
+        with tab1:
             # Persönliche Daten
             st.markdown("### Persönliche Daten")
             personal_data = profile_data.get("persönliche_daten", {})
@@ -1219,6 +1146,8 @@ if st.session_state.step == 1:
                     email = "gl@galdora.de"
                 elif selected_ansprechpartner == "Konrad Ruszczyk":
                     email = "konrad@galdora.de"
+                elif selected_ansprechpartner == "Alessandro Böhm":
+                    email = "boehm@galdora.de"  # Korrigierter E-Mail mit "oe" statt "ö"
                 else:
                     # Standard E-Mail-Format für andere Ansprechpartner
                     nachname = selected_ansprechpartner.split()[-1]
@@ -1241,10 +1170,51 @@ if st.session_state.step == 1:
             # Berufserfahrung
             st.markdown("### Berufserfahrung")
             
+            # Sortieroptionen für Berufserfahrung
+            exp_sort_col1, exp_sort_col2 = st.columns([3, 1])
+            with exp_sort_col1:
+                st.markdown("**Sortierung der Berufserfahrungen:**")
+            with exp_sort_col2:
+                exp_sort_order = st.selectbox(
+                    "Reihenfolge",
+                    options=["Neueste zuerst", "Älteste zuerst"],
+                    index=0,
+                    key="exp_sort_order"
+                )
+            
             # Liste für editierte Berufserfahrungen
             edited_experience = []
             
-            for idx, erfahrung in enumerate(profile_data.get("berufserfahrung", [])):
+            # Sortiere Berufserfahrungen nach Zeitraum
+            berufserfahrung = profile_data.get("berufserfahrung", [])
+            if exp_sort_order == "Neueste zuerst":
+                berufserfahrung = sort_by_time_period(berufserfahrung, reverse=True)
+            else:
+                berufserfahrung = sort_by_time_period(berufserfahrung, reverse=False)
+            
+            # Berufserfahrungen nach Sortierung in der Session speichern, wenn noch nicht vorhanden
+            if 'berufserfahrung_items' not in st.session_state:
+                st.session_state.berufserfahrung_items = berufserfahrung
+            else:
+                # Nur aktualisieren, wenn Sortierung geändert wurde
+                if exp_sort_order != st.session_state.get('exp_sort_order_last', ''):
+                    st.session_state.berufserfahrung_items = berufserfahrung
+                    st.session_state.exp_sort_order_last = exp_sort_order
+            
+            # Funktion zum Verschieben eines Elements nach oben
+            def move_exp_up(index):
+                if index > 0:
+                    st.session_state.berufserfahrung_items[index], st.session_state.berufserfahrung_items[index-1] = st.session_state.berufserfahrung_items[index-1], st.session_state.berufserfahrung_items[index]
+                    st.rerun()
+            
+            # Funktion zum Verschieben eines Elements nach unten
+            def move_exp_down(index):
+                if index < len(st.session_state.berufserfahrung_items) - 1:
+                    st.session_state.berufserfahrung_items[index], st.session_state.berufserfahrung_items[index+1] = st.session_state.berufserfahrung_items[index+1], st.session_state.berufserfahrung_items[index]
+                    st.rerun()
+            
+            # Berufserfahrungen aus der Session verwenden
+            for idx, erfahrung in enumerate(st.session_state.berufserfahrung_items):
                 with st.expander(f"{erfahrung.get('zeitraum', 'Neue Erfahrung')}: {erfahrung.get('position', '')} bei {erfahrung.get('unternehmen', '')}", expanded=False):
                     exp_data = {}
                     col1, col2 = st.columns(2)
@@ -1264,6 +1234,16 @@ if st.session_state.step == 1:
                     )
                     # Aufgaben zurück in eine Liste konvertieren
                     exp_data["aufgaben"] = [task.strip() for task in new_aufgaben.split("\n") if task.strip()]
+                    
+                    # Steuerelemente zum Ändern der Reihenfolge
+                    st.markdown("##### Position anpassen")
+                    cols = st.columns([1, 1, 3])
+                    with cols[0]:
+                        if st.button("↑", key=f"exp_up_{idx}", help="Nach oben verschieben", use_container_width=True):
+                            move_exp_up(idx)
+                    with cols[1]:
+                        if st.button("↓", key=f"exp_down_{idx}", help="Nach unten verschieben", use_container_width=True):
+                            move_exp_down(idx)
                     
                     # Option zum Löschen dieser Berufserfahrung
                     include = st.checkbox(f"Diese Berufserfahrung einbeziehen", value=True, key=f"exp_demo_{idx}")
@@ -1294,197 +1274,182 @@ if st.session_state.step == 1:
             # Ausbildung
             st.markdown("### Ausbildung")
             
+            # Sortieroptionen für Ausbildung
+            edu_sort_col1, edu_sort_col2 = st.columns([3, 1])
+            with edu_sort_col1:
+                st.markdown("**Sortierung der Ausbildungen:**")
+            with edu_sort_col2:
+                edu_sort_order = st.selectbox(
+                    "Reihenfolge",
+                    options=["Neueste zuerst", "Älteste zuerst"],
+                    index=0,
+                    key="edu_sort_order"
+                )
+            
             # Liste für editierte Ausbildungen
             edited_education = []
             
-            for idx, ausbildung in enumerate(profile_data.get("ausbildung", [])):
-                with st.expander(f"{ausbildung.get('zeitraum', 'Neue Ausbildung')}: {ausbildung.get('abschluss', '')} - {ausbildung.get('institution', '')}", expanded=False):
+            # Sortiere Ausbildungen nach Zeitraum
+            ausbildung = profile_data.get("ausbildung", [])
+            if edu_sort_order == "Neueste zuerst":
+                ausbildung = sort_by_time_period(ausbildung, reverse=True)
+            else:
+                ausbildung = sort_by_time_period(ausbildung, reverse=False)
+            
+            # Ausbildungen nach Sortierung in der Session speichern, wenn noch nicht vorhanden
+            if 'ausbildung_items' not in st.session_state:
+                st.session_state.ausbildung_items = ausbildung
+            else:
+                # Nur aktualisieren, wenn Sortierung geändert wurde
+                if edu_sort_order != st.session_state.get('edu_sort_order_last', ''):
+                    st.session_state.ausbildung_items = ausbildung
+                    st.session_state.edu_sort_order_last = edu_sort_order
+            
+            # Funktion zum Verschieben eines Elements nach oben
+            def move_edu_up(index):
+                if index > 0:
+                    st.session_state.ausbildung_items[index], st.session_state.ausbildung_items[index-1] = st.session_state.ausbildung_items[index-1], st.session_state.ausbildung_items[index]
+                    st.rerun()
+            
+            # Funktion zum Verschieben eines Elements nach unten
+            def move_edu_down(index):
+                if index < len(st.session_state.ausbildung_items) - 1:
+                    st.session_state.ausbildung_items[index], st.session_state.ausbildung_items[index+1] = st.session_state.ausbildung_items[index+1], st.session_state.ausbildung_items[index]
+                    st.rerun()
+            
+            # Ausbildungen aus der Session verwenden
+            for idx, ausbildung_item in enumerate(st.session_state.ausbildung_items):
+                with st.expander(f"{ausbildung_item.get('zeitraum', 'Neue Ausbildung')}: {ausbildung_item.get('abschluss', '')} - {ausbildung_item.get('institution', '')}", expanded=False):
                     edu_data = {}
                     col1, col2 = st.columns(2)
-                # Kontaktinformationen
-                st.markdown("### Kontaktinformationen")
-                kontakt = personal_data.get("kontakt", {})
-                
-                # Ansprechpartner-Dropdown
-                ansprechpartner_options = [
-                    "Kai Fischer", 
-                    "Melike Demirkol", 
-                    "Konrad Ruszczyk", 
-                    "Alessandro Böhm", 
-                    "Salim Alizai"
-                ]
-                
-                # Vorauswahl des Ansprechpartners (falls vorhanden)
-                current_ansprechpartner = kontakt.get("ansprechpartner", "")
-                default_index = 0
-                if current_ansprechpartner in ansprechpartner_options:
-                    default_index = ansprechpartner_options.index(current_ansprechpartner)
-                
-                # Ansprechpartner auswählen
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    selected_ansprechpartner = st.selectbox(
-                        "Ansprechpartner",
-                        options=ansprechpartner_options,
-                        index=default_index,
-                        key="ansprechpartner_demo"
-                    )
-                    edited_data["ansprechpartner"] = selected_ansprechpartner
+                    with col1:
+                        edu_data["zeitraum"] = st.text_input(f"Zeitraum (Ausbildung) #{idx+1}", value=ausbildung_item.get("zeitraum", ""), key=f"edu_zeit_demo_{idx}")
+                        edu_data["institution"] = st.text_input(f"Institution #{idx+1}", value=ausbildung_item.get("institution", ""), key=f"institution_demo_{idx}")
+                    with col2:
+                        edu_data["abschluss"] = st.text_input(f"Abschluss #{idx+1}", value=ausbildung_item.get("abschluss", ""), key=f"abschluss_demo_{idx}")
+                        edu_data["note"] = st.text_input(f"Note #{idx+1}", value=ausbildung_item.get("note", ""), key=f"note_demo_{idx}")
                     
-                    # E-Mail-Adresse basierend auf dem Namen mit Ausnahmen
-                    if selected_ansprechpartner == "Salim Alizai":
-                        email = "gl@galdora.de"
-                    elif selected_ansprechpartner == "Konrad Ruszczyk":
-                        email = "konrad@galdora.de"
-                    else:
-                        # Standard E-Mail-Format für andere Ansprechpartner
-                        nachname = selected_ansprechpartner.split()[-1]
-                        email = f"{nachname.lower()}@galdora.de"
+                    edu_data["schwerpunkte"] = st.text_input(f"Studienschwerpunkte #{idx+1}", value=ausbildung_item.get("schwerpunkte", ""), key=f"schwerpunkte_demo_{idx}")
                     
-                    edited_data["email"] = email
-                
-                with col2:
-                    # Telefonnummer mit Ausnahme für Salim Alizai
-                    if selected_ansprechpartner == "Salim Alizai":
-                        telefon = "+49 177 7089045"
-                    else:
-                        telefon = "02161 62126-02"
-                    edited_data["telefon"] = st.text_input("Telefon", value=telefon, disabled=True)
-                
-                with col3:
-                    # E-Mail-Adresse anzeigen
-                    st.text_input("E-Mail", value=email, disabled=True)
-                
-                # Berufserfahrung
-                st.markdown("### Berufserfahrung")
-                
-                # Liste für editierte Berufserfahrungen
-                edited_experience = []
-                
-                for idx, erfahrung in enumerate(profile_data.get("berufserfahrung", [])):
-                    with st.expander(f"{erfahrung.get('zeitraum', 'Neue Erfahrung')}: {erfahrung.get('position', '')} bei {erfahrung.get('unternehmen', '')}", expanded=False):
-                        exp_data = {}
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            exp_data["zeitraum"] = st.text_input(f"Zeitraum #{idx+1}", value=erfahrung.get("zeitraum", ""), key=f"zeit_demo_{idx}")
-                            exp_data["unternehmen"] = st.text_input(f"Unternehmen #{idx+1}", value=erfahrung.get("unternehmen", ""), key=f"unternehmen_demo_{idx}")
-                        with col2:
-                            exp_data["position"] = st.text_input(f"Position #{idx+1}", value=erfahrung.get("position", ""), key=f"position_demo_{idx}")
+                    # Steuerelemente zum Ändern der Reihenfolge
+                    st.markdown("##### Position anpassen")
+                    cols = st.columns([1, 1, 3])
+                    with cols[0]:
+                        if st.button("↑", key=f"edu_up_{idx}", help="Nach oben verschieben", use_container_width=True):
+                            move_edu_up(idx)
+                    with cols[1]:
+                        if st.button("↓", key=f"edu_down_{idx}", help="Nach unten verschieben", use_container_width=True):
+                            move_edu_down(idx)
+                    
+                    # Option zum Löschen dieser Ausbildung
+                    include = st.checkbox(f"Diese Ausbildung einbeziehen", value=True, key=f"edu_demo_{idx}")
+                    if include:
+                        edited_education.append(edu_data)
+            
+            # Button zum Hinzufügen einer neuen Ausbildung
+            if st.button("+ Neue Ausbildung hinzufügen", key="add_edu_demo"):
+                with st.expander("Neue Ausbildung", expanded=True):
+                    new_edu = {}
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        new_edu["zeitraum"] = st.text_input("Zeitraum (Ausbildung neu)", key="new_edu_zeit_demo")
+                        new_edu["institution"] = st.text_input("Institution (neu)", key="new_institution_demo")
+                    with col2:
+                        new_edu["abschluss"] = st.text_input("Abschluss (neu)", key="new_abschluss_demo")
+                        new_edu["note"] = st.text_input("Note (neu)", key="new_note_demo")
+                    
+                        new_edu["schwerpunkte"] = st.text_input("Studienschwerpunkte (neu)", key="new_schwerpunkte_demo")
                         
-                        # Aufgaben als Textarea mit einer Aufgabe pro Zeile
-                        aufgaben_text = "\n".join(erfahrung.get("aufgaben", []))
-                        new_aufgaben = st.text_area(
-                            f"Aufgaben #{idx+1} (eine Aufgabe pro Zeile)", 
-                            value=aufgaben_text,
-                            height=150,
-                            key=f"aufgaben_demo_{idx}"
-                        )
-                        # Aufgaben zurück in eine Liste konvertieren
-                        exp_data["aufgaben"] = [task.strip() for task in new_aufgaben.split("\n") if task.strip()]
-                        
-                        # Option zum Löschen dieser Berufserfahrung
-                        include = st.checkbox(f"Diese Berufserfahrung einbeziehen", value=True, key=f"exp_demo_{idx}")
-                        if include:
-                            edited_experience.append(exp_data)
-                
-                # Button zum Hinzufügen einer neuen Berufserfahrung
-                if st.button("+ Neue Berufserfahrung hinzufügen", key="add_exp_demo"):
-                    with st.expander("Neue Berufserfahrung", expanded=True):
-                        new_exp = {}
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            new_exp["zeitraum"] = st.text_input("Zeitraum (neu)", key="new_zeit_demo")
-                            new_exp["unternehmen"] = st.text_input("Unternehmen (neu)", key="new_unternehmen_demo")
-                        with col2:
-                            new_exp["position"] = st.text_input("Position (neu)", key="new_position_demo")
-                            
-                            new_aufgaben = st.text_area(
-                                "Aufgaben (eine Aufgabe pro Zeile)", 
-                                height=150,
-                                key="new_aufgaben_demo"
-                            )
-                            new_exp["aufgaben"] = [task.strip() for task in new_aufgaben.split("\n") if task.strip()]
-                            
-                            if st.button("Berufserfahrung hinzufügen", key="save_exp_demo"):
-                                edited_experience.append(new_exp)
-                
-                # Ausbildung
-                st.markdown("### Ausbildung")
-                
-                # Liste für editierte Ausbildungen
-                edited_education = []
-                
-                for idx, ausbildung in enumerate(profile_data.get("ausbildung", [])):
-                    with st.expander(f"{ausbildung.get('zeitraum', 'Neue Ausbildung')}: {ausbildung.get('abschluss', '')} - {ausbildung.get('institution', '')}", expanded=False):
-                        edu_data = {}
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            edu_data["zeitraum"] = st.text_input(f"Zeitraum (Ausbildung) #{idx+1}", value=ausbildung.get("zeitraum", ""), key=f"edu_zeit_demo_{idx}")
-                            edu_data["institution"] = st.text_input(f"Institution #{idx+1}", value=ausbildung.get("institution", ""), key=f"institution_demo_{idx}")
-                        with col2:
-                            edu_data["abschluss"] = st.text_input(f"Abschluss #{idx+1}", value=ausbildung.get("abschluss", ""), key=f"abschluss_demo_{idx}")
-                            edu_data["note"] = st.text_input(f"Note #{idx+1}", value=ausbildung.get("note", ""), key=f"note_demo_{idx}")
-                        
-                        edu_data["schwerpunkte"] = st.text_input(f"Studienschwerpunkte #{idx+1}", value=ausbildung.get("schwerpunkte", ""), key=f"schwerpunkte_demo_{idx}")
-                        
-                        # Option zum Löschen dieser Ausbildung
-                        include = st.checkbox(f"Diese Ausbildung einbeziehen", value=True, key=f"edu_demo_{idx}")
-                        if include:
-                            edited_education.append(edu_data)
-                
-                # Button zum Hinzufügen einer neuen Ausbildung
-                if st.button("+ Neue Ausbildung hinzufügen", key="add_edu_demo"):
-                    with st.expander("Neue Ausbildung", expanded=True):
-                        new_edu = {}
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            new_edu["zeitraum"] = st.text_input("Zeitraum (Ausbildung neu)", key="new_edu_zeit_demo")
-                            new_edu["institution"] = st.text_input("Institution (neu)", key="new_institution_demo")
-                        with col2:
-                            new_edu["abschluss"] = st.text_input("Abschluss (neu)", key="new_abschluss_demo")
-                            new_edu["note"] = st.text_input("Note (neu)", key="new_note_demo")
-                        
-                            new_edu["schwerpunkte"] = st.text_input("Studienschwerpunkte (neu)", key="new_schwerpunkte_demo")
-                            
-                            if st.button("Ausbildung hinzufügen", key="save_edu_demo"):
-                                edited_education.append(new_edu)
-                
-                # Weiterbildung
-                st.markdown("### Weiterbildung")
-                
-                # Liste für editierte Weiterbildungen
-                edited_training = []
-                
-                for idx, weiterbildung in enumerate(profile_data.get("weiterbildungen", [])):
-                    with st.expander(f"{weiterbildung.get('zeitraum', 'Neue Weiterbildung')}: {weiterbildung.get('bezeichnung', '')}", expanded=False):
-                        training_data = {}
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            training_data["zeitraum"] = st.text_input(f"Zeitraum (Weiterbildung) #{idx+1}", value=weiterbildung.get("zeitraum", ""), key=f"weiter_zeit_demo_{idx}")
-                        with col2:
-                            training_data["bezeichnung"] = st.text_input(f"Bezeichnung #{idx+1}", value=weiterbildung.get("bezeichnung", ""), key=f"bezeichnung_demo_{idx}")
-                        
-                        training_data["abschluss"] = st.text_input(f"Abschluss (Weiterbildung) #{idx+1}", value=weiterbildung.get("abschluss", ""), key=f"weiter_abschluss_demo_{idx}")
-                        
-                        # Option zum Löschen dieser Weiterbildung
-                        include = st.checkbox(f"Diese Weiterbildung einbeziehen", value=True, key=f"train_demo_{idx}")
-                        if include:
-                            edited_training.append(training_data)
-                
-                # Button zum Hinzufügen einer neuen Weiterbildung
-                if st.button("+ Neue Weiterbildung hinzufügen", key="add_weiter_demo"):
-                    with st.expander("Neue Weiterbildung", expanded=True):
-                        new_training = {}
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            new_training["zeitraum"] = st.text_input("Zeitraum (Weiterbildung neu)", key="new_weiter_zeit_demo")
-                        with col2:
-                            new_training["bezeichnung"] = st.text_input("Bezeichnung (neu)", key="new_bezeichnung_demo")
-                        
-                        new_training["abschluss"] = st.text_input("Abschluss (Weiterbildung neu)", key="new_weiter_abschluss_demo")
-                        
-                        if st.button("Weiterbildung hinzufügen", key="save_weiter_demo"):
-                            edited_training.append(new_training)
+                        if st.button("Ausbildung hinzufügen", key="save_edu_demo"):
+                            edited_education.append(new_edu)
+            
+            # Weiterbildung
+            st.markdown("### Weiterbildung")
+            
+            # Sortieroptionen für Weiterbildung
+            training_sort_col1, training_sort_col2 = st.columns([3, 1])
+            with training_sort_col1:
+                st.markdown("**Sortierung der Weiterbildungen:**")
+            with training_sort_col2:
+                training_sort_order = st.selectbox(
+                    "Reihenfolge",
+                    options=["Neueste zuerst", "Älteste zuerst"],
+                    index=0,
+                    key="training_sort_order"
+                )
+            
+            # Liste für editierte Weiterbildungen
+            edited_training = []
+            
+            # Sortiere Weiterbildungen nach Zeitraum
+            weiterbildungen = profile_data.get("weiterbildungen", [])
+            if training_sort_order == "Neueste zuerst":
+                weiterbildungen = sort_by_time_period(weiterbildungen, reverse=True)
+            else:
+                weiterbildungen = sort_by_time_period(weiterbildungen, reverse=False)
+            
+            # Weiterbildungen nach Sortierung in der Session speichern, wenn noch nicht vorhanden
+            if 'weiterbildung_items' not in st.session_state:
+                st.session_state.weiterbildung_items = weiterbildungen
+            else:
+                # Nur aktualisieren, wenn Sortierung geändert wurde
+                if training_sort_order != st.session_state.get('training_sort_order_last', ''):
+                    st.session_state.weiterbildung_items = weiterbildungen
+                    st.session_state.training_sort_order_last = training_sort_order
+            
+            # Funktion zum Verschieben eines Elements nach oben
+            def move_training_up(index):
+                if index > 0:
+                    st.session_state.weiterbildung_items[index], st.session_state.weiterbildung_items[index-1] = st.session_state.weiterbildung_items[index-1], st.session_state.weiterbildung_items[index]
+                    st.rerun()
+            
+            # Funktion zum Verschieben eines Elements nach unten
+            def move_training_down(index):
+                if index < len(st.session_state.weiterbildung_items) - 1:
+                    st.session_state.weiterbildung_items[index], st.session_state.weiterbildung_items[index+1] = st.session_state.weiterbildung_items[index+1], st.session_state.weiterbildung_items[index]
+                    st.rerun()
+            
+            # Weiterbildungen aus der Session verwenden
+            for idx, weiterbildung in enumerate(st.session_state.weiterbildung_items):
+                with st.expander(f"{weiterbildung.get('zeitraum', 'Neue Weiterbildung')}: {weiterbildung.get('bezeichnung', '')}", expanded=False):
+                    training_data = {}
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        training_data["zeitraum"] = st.text_input(f"Zeitraum (Weiterbildung) #{idx+1}", value=weiterbildung.get("zeitraum", ""), key=f"weiter_zeit_demo_{idx}")
+                    with col2:
+                        training_data["bezeichnung"] = st.text_input(f"Bezeichnung #{idx+1}", value=weiterbildung.get("bezeichnung", ""), key=f"bezeichnung_demo_{idx}")
+                    
+                    training_data["abschluss"] = st.text_input(f"Abschluss (Weiterbildung) #{idx+1}", value=weiterbildung.get("abschluss", ""), key=f"weiter_abschluss_demo_{idx}")
+                    
+                    # Steuerelemente zum Ändern der Reihenfolge
+                    st.markdown("##### Position anpassen")
+                    cols = st.columns([1, 1, 3])
+                    with cols[0]:
+                        if st.button("↑", key=f"training_up_{idx}", help="Nach oben verschieben", use_container_width=True):
+                            move_training_up(idx)
+                    with cols[1]:
+                        if st.button("↓", key=f"training_down_{idx}", help="Nach unten verschieben", use_container_width=True):
+                            move_training_down(idx)
+                    
+                    # Option zum Löschen dieser Weiterbildung
+                    include = st.checkbox(f"Diese Weiterbildung einbeziehen", value=True, key=f"train_demo_{idx}")
+                    if include:
+                        edited_training.append(training_data)
+            
+            # Button zum Hinzufügen einer neuen Weiterbildung
+            if st.button("+ Neue Weiterbildung hinzufügen", key="add_weiter_demo"):
+                with st.expander("Neue Weiterbildung", expanded=True):
+                    new_training = {}
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        new_training["zeitraum"] = st.text_input("Zeitraum (Weiterbildung neu)", key="new_weiter_zeit_demo")
+                    with col2:
+                        new_training["bezeichnung"] = st.text_input("Bezeichnung (neu)", key="new_bezeichnung_demo")
+                    
+                    new_training["abschluss"] = st.text_input("Abschluss (Weiterbildung neu)", key="new_weiter_abschluss_demo")
+                    
+                    if st.button("Weiterbildung hinzufügen", key="save_weiter_demo"):
+                        edited_training.append(new_training)
 
                                     # Zusammenführen der bearbeiteten Daten
                         complete_edited_data = {
@@ -1523,19 +1488,9 @@ if st.session_state.step == 1:
                 for error in validation_errors:
                     st.error(error)
 
-                            # Füge einen Button hinzu, um zum Export-Bereich zu wechseln
-                    st.divider()
-                    col1, col2, col3 = st.columns([1, 2, 1])
-                    with col2:
-                        if st.button("Weiter zum Profil-Export", key="to_export_button", use_container_width=True, type="primary"):
-                            st.session_state.export_mode = True
-                            st.rerun()
-                            
-                    # Der Code für die Profilvorschau wird in der Export-Ansicht angezeigt
-                    # Dieser Block ist nur als Referenz hier und wird nicht ausgeführt
-                    if False:  # Dieser Block wird nicht ausgeführt
-                        # Profil generieren und Vorschau anzeigen
-                        st.markdown("### Profilvorschau und Export")
+        with tab2:
+            # Profil generieren und Vorschau anzeigen
+            st.markdown("### Profilvorschau und Export")
             
             # Profildaten aus der Session holen oder aus den aktuellen bearbeiteten Daten
             edited_data_to_use = st.session_state.edited_data if "edited_data" in st.session_state else complete_edited_data
@@ -1607,8 +1562,13 @@ if st.session_state.step == 1:
                         profile_path = generator.generate_profile(edited_data_to_use, output_path, template=template_to_use)
                         st.session_state.preview_pdf = profile_path
                         
-                        # Zeige eine Erfolgsmeldung an
-                        st.success("Profil erfolgreich generiert!")
+                        # Vergewissere, dass die PDF-Datei existiert
+                        if os.path.exists(profile_path) and os.path.getsize(profile_path) > 0:
+                            # Zeige eine Erfolgsmeldung an
+                            st.success("Profil erfolgreich generiert!")
+                        else:
+                            st.error("Die generierte PDF konnte nicht gefunden werden oder ist leer.", icon="🚫")
+                            st.session_state.preview_pdf = None
                         
                         # Speichere das ausgewählte Template für zukünftige Aktualisierungen
                         st.session_state.selected_template = template_to_use
@@ -1620,8 +1580,26 @@ if st.session_state.step == 1:
                 st.markdown("#### Profil-Vorschau")
                 # Prüfen ob die Datei existiert, bevor wir versuchen sie anzuzeigen
                 if st.session_state.preview_pdf and os.path.exists(st.session_state.preview_pdf):
-                    pdf_display = display_pdf(st.session_state.preview_pdf)
-                    st.markdown(pdf_display, unsafe_allow_html=True)
+                    # PDF-Vorschau anzeigen mit verbesserter Methode
+                    # Die neue display_pdf Funktion zeigt die PDF direkt an oder liefert None zurück
+                    display_result = display_pdf(st.session_state.preview_pdf)
+                    
+                    # Wenn die PDF nicht angezeigt werden konnte, zeige zusätzliche Hilfe an
+                    if display_result is None:
+                        st.warning("Die PDF-Vorschau konnte nicht vollständig angezeigt werden. Sie können die PDF aber trotzdem herunterladen.", icon="⚠️")
+                        
+                        # Biete Download-Button als Alternative an
+                        try:
+                            with open(st.session_state.preview_pdf, "rb") as file:
+                                st.download_button(
+                                    label="PDF direkt herunterladen",
+                                    data=file,
+                                    file_name="Profil.pdf",
+                                    mime="application/pdf",
+                                    key="direct_download_pdf"
+                                )
+                        except Exception as e:
+                            st.error(f"Fehler beim Laden der PDF: {str(e)}", icon="🚫")
                 else:
                     st.error("Die PDF-Vorschau ist nicht verfügbar. Bitte generieren Sie die Vorschau erneut.")
                 
@@ -1681,9 +1659,9 @@ if st.session_state.step == 1:
                             )
                     except Exception as e:
                         st.error(f"Fehler bei der Word-Dokument-Generierung: {str(e)}")
-        else:
-            # Normaler Modus - Standardmäßig wird der "Standard (Extraktion → Analyse)"-Modus verwendet
-            processing_mode = "Standard (Extraktion → Analyse)"
+    else:
+        # Normaler Modus - Standardmäßig wird der "Standard (Extraktion → Analyse)"-Modus verwendet
+        processing_mode = "Standard (Extraktion → Analyse)"
         
         # Zentrale Spalte für den File Uploader
         col1, col2, col3 = st.columns([1, 2, 1])
@@ -1797,73 +1775,71 @@ if st.session_state.step == 1:
                     # Profildaten aus der Session holen
                     edited_data = {}
                     
-                    # Persönliche Daten
-                    st.markdown("### Persönliche Daten")
-                    personal_data = profile_data.get("persönliche_daten", {})
-                    
-                    # Name und Grunddaten
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        edited_data["name"] = st.text_input("Name", value=personal_data.get("name", ""))
-                    with col2:
-                        edited_data["wohnort"] = st.text_input("Wohnort", value=personal_data.get("wohnort", ""))
-                    with col3:
-                        edited_data["jahrgang"] = st.text_input("Jahrgang", value=personal_data.get("jahrgang", ""))
-                    
-                    # Profilbild-Upload hinzufügen
-                    st.markdown("### Profilbild")
-                    st.markdown("Laden Sie optional ein Profilbild hoch (JPG, PNG):")
-                    
-                    # Profilbild-Upload
-                    profile_image = st.file_uploader("Profilbild hochladen", 
-                                                     type=["jpg", "jpeg", "png"], 
-                                                     key="profile_image_uploader")
-                    
-                    # Bild anzeigen und in Session speichern, wenn hochgeladen
-                    if profile_image is not None:
-                        # Bild anzeigen
-                        st.image(profile_image, width=150, caption="Vorschau des Profilbilds")
-                        
-                        # Bild in Session speichern
-                        if 'profile_image' not in st.session_state or st.session_state.profile_image != profile_image:
-                            # Temporäre Datei für das Bild erstellen
-                            img_extension = os.path.splitext(profile_image.name)[1].lower()
-                            with tempfile.NamedTemporaryFile(delete=False, suffix=img_extension) as tmp_file:
-                                tmp_file.write(profile_image.getbuffer())
-                                img_path = tmp_file.name
-                                st.session_state.profile_image_path = img_path
-                                st.session_state.temp_files.append(img_path)
-                                st.session_state.profile_image = profile_image
-                    
-                    # Führerschein und Wunschgehalt
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        edited_data["führerschein"] = st.text_input("Führerschein", value=personal_data.get("führerschein", ""))
-                    with col2:
-                        edited_data["wunschgehalt"] = st.text_input("Wunschgehalt", value=personal_data.get("wunschgehalt", ""))
-                    
-                    # Eingeschränkte Ansicht ohne Tabs - ein Button am Ende der Seite führt zum Export
+                    # Zwei Tabs erstellen für Informationsauswahl und Profil-Generierung mit verbessertem Stil
                     st.markdown("""
                     <style>
-                        /* Stil für den Export-Button */
-                        .export-button {
-                            background: rgba(255, 255, 255, 0.3) !important;
+                        .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] {
+                            background-color: rgba(255, 255, 255, 0.2) !important;
                             color: white !important;
                             font-weight: 600 !important;
-                            padding: 15px 25px !important;
-                            border-radius: 12px !important;
-                            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2) !important;
+                        }
+                        .stTabs [data-baseweb="tab-list"] button {
+                            padding: 10px 20px !important;
                         }
                     </style>
                     """, unsafe_allow_html=True)
+                    tab1, tab2 = st.tabs(["Informationen bearbeiten", "Profil exportieren"])
                     
-                    # Daten bearbeiten Bereich abgeschlossen
-                    # Die Daten werden jetzt oben schon bearbeitet, daher ist dieser Abschnitt nicht mehr nötig
-                    
-                    # Verfügbarkeit des Bewerbers
-                    st.markdown("### Verfügbarkeit")
-                    # Dropdown für Verfügbarkeitsstatus
-                    verfuegbarkeit_optionen = [
+                    with tab1:
+                        # Persönliche Daten
+                        st.markdown("### Persönliche Daten")
+                        personal_data = profile_data.get("persönliche_daten", {})
+                        
+                        # Name und Grunddaten
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            edited_data["name"] = st.text_input("Name", value=personal_data.get("name", ""))
+                        with col2:
+                            edited_data["wohnort"] = st.text_input("Wohnort", value=personal_data.get("wohnort", ""))
+                        with col3:
+                            edited_data["jahrgang"] = st.text_input("Jahrgang", value=personal_data.get("jahrgang", ""))
+                        
+                        # Profilbild-Upload hinzufügen
+                        st.markdown("### Profilbild")
+                        st.markdown("Laden Sie optional ein Profilbild hoch (JPG, PNG):")
+                        
+                        # Profilbild-Upload
+                        profile_image = st.file_uploader("Profilbild hochladen", 
+                                                         type=["jpg", "jpeg", "png"], 
+                                                         key="profile_image_uploader")
+                        
+                        # Bild anzeigen und in Session speichern, wenn hochgeladen
+                        if profile_image is not None:
+                            # Bild anzeigen
+                            st.image(profile_image, width=150, caption="Vorschau des Profilbilds")
+                            
+                            # Bild in Session speichern
+                            if 'profile_image' not in st.session_state or st.session_state.profile_image != profile_image:
+                                # Temporäre Datei für das Bild erstellen
+                                img_extension = os.path.splitext(profile_image.name)[1].lower()
+                                with tempfile.NamedTemporaryFile(delete=False, suffix=img_extension) as tmp_file:
+                                    tmp_file.write(profile_image.getbuffer())
+                                    img_path = tmp_file.name
+                                    st.session_state.profile_image_path = img_path
+                                    st.session_state.temp_files.append(img_path)
+                                    st.session_state.profile_image = profile_image
+                            
+                        # Führerschein und Wunschgehalt
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            edited_data["führerschein"] = st.text_input("Führerschein", value=personal_data.get("führerschein", ""))
+                        with col2:
+                            edited_data["wunschgehalt"] = st.text_input("Wunschgehalt", value=profile_data.get("wunschgehalt", ""))
+                        
+                        # Verfügbarkeit des Bewerbers
+                        st.markdown("### Verfügbarkeit")
+                        # Dropdown für Verfügbarkeitsstatus
+                        verfuegbarkeit_optionen = [
                             "Sofort verfügbar",
                             "Kündigungsfrist 1 Monat",
                             "Kündigungsfrist 2 Monate",
@@ -1926,6 +1902,8 @@ if st.session_state.step == 1:
                                 email = "gl@galdora.de"
                             elif selected_ansprechpartner == "Konrad Ruszczyk":
                                 email = "konrad@galdora.de"
+                            elif selected_ansprechpartner == "Alessandro Böhm":
+                                email = "boehm@galdora.de"  # Korrigierter E-Mail mit "oe" statt "ö"
                             else:
                                 # Standard E-Mail-Format für andere Ansprechpartner
                                 nachname = selected_ansprechpartner.split()[-1]
@@ -1948,18 +1926,59 @@ if st.session_state.step == 1:
                         # Berufserfahrung
                         st.markdown("### Berufserfahrung")
                         
+                        # Sortieroptionen für Berufserfahrung
+                        exp_sort_col1, exp_sort_col2 = st.columns([3, 1])
+                        with exp_sort_col1:
+                            st.markdown("**Sortierung der Berufserfahrungen:**")
+                        with exp_sort_col2:
+                            exp_sort_order = st.selectbox(
+                                "Reihenfolge",
+                                options=["Neueste zuerst", "Älteste zuerst"],
+                                index=0,
+                                key="exp_sort_order"
+                            )
+                        
                         # Liste für editierte Berufserfahrungen
                         edited_experience = []
                         
-                        for idx, erfahrung in enumerate(profile_data.get("berufserfahrung", [])):
+                        # Sortiere Berufserfahrungen nach Zeitraum
+                        berufserfahrung = profile_data.get("berufserfahrung", [])
+                        if exp_sort_order == "Neueste zuerst":
+                            berufserfahrung = sort_by_time_period(berufserfahrung, reverse=True)
+                        else:
+                            berufserfahrung = sort_by_time_period(berufserfahrung, reverse=False)
+                        
+                        # Berufserfahrungen nach Sortierung in der Session speichern, wenn noch nicht vorhanden
+                        if 'berufserfahrung_items' not in st.session_state:
+                            st.session_state.berufserfahrung_items = berufserfahrung
+                        else:
+                            # Nur aktualisieren, wenn Sortierung geändert wurde
+                            if exp_sort_order != st.session_state.get('exp_sort_order_last', ''):
+                                st.session_state.berufserfahrung_items = berufserfahrung
+                                st.session_state.exp_sort_order_last = exp_sort_order
+                        
+                        # Funktion zum Verschieben eines Elements nach oben
+                        def move_exp_up(index):
+                            if index > 0:
+                                st.session_state.berufserfahrung_items[index], st.session_state.berufserfahrung_items[index-1] = st.session_state.berufserfahrung_items[index-1], st.session_state.berufserfahrung_items[index]
+                                st.rerun()
+                        
+                        # Funktion zum Verschieben eines Elements nach unten
+                        def move_exp_down(index):
+                            if index < len(st.session_state.berufserfahrung_items) - 1:
+                                st.session_state.berufserfahrung_items[index], st.session_state.berufserfahrung_items[index+1] = st.session_state.berufserfahrung_items[index+1], st.session_state.berufserfahrung_items[index]
+                                st.rerun()
+                        
+                        # Berufserfahrungen aus der Session verwenden
+                        for idx, erfahrung in enumerate(st.session_state.berufserfahrung_items):
                             with st.expander(f"{erfahrung.get('zeitraum', 'Neue Erfahrung')}: {erfahrung.get('position', '')} bei {erfahrung.get('unternehmen', '')}", expanded=False):
                                 exp_data = {}
                                 col1, col2 = st.columns(2)
                                 with col1:
-                                    exp_data["zeitraum"] = st.text_input(f"Zeitraum #{idx+1}", value=erfahrung.get("zeitraum", ""))
-                                    exp_data["unternehmen"] = st.text_input(f"Unternehmen #{idx+1}", value=erfahrung.get("unternehmen", ""))
+                                    exp_data["zeitraum"] = st.text_input(f"Zeitraum #{idx+1}", value=erfahrung.get("zeitraum", ""), key=f"zeit_demo_{idx}")
+                                    exp_data["unternehmen"] = st.text_input(f"Unternehmen #{idx+1}", value=erfahrung.get("unternehmen", ""), key=f"unternehmen_demo_{idx}")
                                 with col2:
-                                    exp_data["position"] = st.text_input(f"Position #{idx+1}", value=erfahrung.get("position", ""))
+                                    exp_data["position"] = st.text_input(f"Position #{idx+1}", value=erfahrung.get("position", ""), key=f"position_demo_{idx}")
                                 
                                 # Aufgaben als Textarea mit einer Aufgabe pro Zeile
                                 aufgaben_text = "\n".join(erfahrung.get("aufgaben", []))
@@ -1970,6 +1989,16 @@ if st.session_state.step == 1:
                                 )
                                 # Aufgaben zurück in eine Liste konvertieren
                                 exp_data["aufgaben"] = [task.strip() for task in new_aufgaben.split("\n") if task.strip()]
+                                
+                                # Steuerelemente zum Ändern der Reihenfolge
+                                st.markdown("##### Position anpassen")
+                                cols = st.columns([1, 1, 3])
+                                with cols[0]:
+                                    if st.button("↑", key=f"exp_up_{idx}", help="Nach oben verschieben", use_container_width=True):
+                                        move_exp_up(idx)
+                                with cols[1]:
+                                    if st.button("↓", key=f"exp_down_{idx}", help="Nach unten verschieben", use_container_width=True):
+                                        move_exp_down(idx)
                                 
                                 # Option zum Löschen dieser Berufserfahrung
                                 include = st.checkbox(f"Diese Berufserfahrung einbeziehen", value=True, key=f"exp_{idx}")
@@ -1999,21 +2028,72 @@ if st.session_state.step == 1:
                         # Ausbildung
                         st.markdown("### Ausbildung")
                         
+                        # Sortieroptionen für Ausbildung
+                        edu_sort_col1, edu_sort_col2 = st.columns([3, 1])
+                        with edu_sort_col1:
+                            st.markdown("**Sortierung der Ausbildungen:**")
+                        with edu_sort_col2:
+                            edu_sort_order = st.selectbox(
+                                "Reihenfolge",
+                                options=["Neueste zuerst", "Älteste zuerst"],
+                                index=0,
+                                key="edu_sort_order"
+                            )
+                        
                         # Liste für editierte Ausbildungen
                         edited_education = []
                         
-                        for idx, ausbildung in enumerate(profile_data.get("ausbildung", [])):
-                            with st.expander(f"{ausbildung.get('zeitraum', 'Neue Ausbildung')}: {ausbildung.get('abschluss', '')} - {ausbildung.get('institution', '')}", expanded=False):
+                        # Sortiere Ausbildungen nach Zeitraum
+                        ausbildung = profile_data.get("ausbildung", [])
+                        if edu_sort_order == "Neueste zuerst":
+                            ausbildung = sort_by_time_period(ausbildung, reverse=True)
+                        else:
+                            ausbildung = sort_by_time_period(ausbildung, reverse=False)
+                        
+                        # Ausbildungen nach Sortierung in der Session speichern, wenn noch nicht vorhanden
+                        if 'ausbildung_items' not in st.session_state:
+                            st.session_state.ausbildung_items = ausbildung
+                        else:
+                            # Nur aktualisieren, wenn Sortierung geändert wurde
+                            if edu_sort_order != st.session_state.get('edu_sort_order_last', ''):
+                                st.session_state.ausbildung_items = ausbildung
+                                st.session_state.edu_sort_order_last = edu_sort_order
+                        
+                        # Funktion zum Verschieben eines Elements nach oben
+                        def move_edu_up(index):
+                            if index > 0:
+                                st.session_state.ausbildung_items[index], st.session_state.ausbildung_items[index-1] = st.session_state.ausbildung_items[index-1], st.session_state.ausbildung_items[index]
+                                st.rerun()
+                        
+                        # Funktion zum Verschieben eines Elements nach unten
+                        def move_edu_down(index):
+                            if index < len(st.session_state.ausbildung_items) - 1:
+                                st.session_state.ausbildung_items[index], st.session_state.ausbildung_items[index+1] = st.session_state.ausbildung_items[index+1], st.session_state.ausbildung_items[index]
+                                st.rerun()
+                        
+                        # Ausbildungen aus der Session verwenden
+                        for idx, ausbildung_item in enumerate(st.session_state.ausbildung_items):
+                            with st.expander(f"{ausbildung_item.get('zeitraum', 'Neue Ausbildung')}: {ausbildung_item.get('abschluss', '')} - {ausbildung_item.get('institution', '')}", expanded=False):
                                 edu_data = {}
                                 col1, col2 = st.columns(2)
                                 with col1:
-                                    edu_data["zeitraum"] = st.text_input(f"Zeitraum (Ausbildung) #{idx+1}", value=ausbildung.get("zeitraum", ""))
-                                    edu_data["institution"] = st.text_input(f"Institution #{idx+1}", value=ausbildung.get("institution", ""))
+                                    edu_data["zeitraum"] = st.text_input(f"Zeitraum (Ausbildung) #{idx+1}", value=ausbildung_item.get("zeitraum", ""), key=f"edu_zeit_demo_{idx}")
+                                    edu_data["institution"] = st.text_input(f"Institution #{idx+1}", value=ausbildung_item.get("institution", ""), key=f"institution_demo_{idx}")
                                 with col2:
-                                    edu_data["abschluss"] = st.text_input(f"Abschluss #{idx+1}", value=ausbildung.get("abschluss", ""))
-                                    edu_data["note"] = st.text_input(f"Note #{idx+1}", value=ausbildung.get("note", ""))
+                                    edu_data["abschluss"] = st.text_input(f"Abschluss #{idx+1}", value=ausbildung_item.get("abschluss", ""), key=f"abschluss_demo_{idx}")
+                                    edu_data["note"] = st.text_input(f"Note #{idx+1}", value=ausbildung_item.get("note", ""), key=f"note_demo_{idx}")
                                 
-                                edu_data["schwerpunkte"] = st.text_input(f"Studienschwerpunkte #{idx+1}", value=ausbildung.get("schwerpunkte", ""))
+                                edu_data["schwerpunkte"] = st.text_input(f"Studienschwerpunkte #{idx+1}", value=ausbildung_item.get("schwerpunkte", ""), key=f"schwerpunkte_demo_{idx}")
+                                
+                                # Steuerelemente zum Ändern der Reihenfolge
+                                st.markdown("##### Position anpassen")
+                                cols = st.columns([1, 1, 3])
+                                with cols[0]:
+                                    if st.button("↑", key=f"edu_up_{idx}", help="Nach oben verschieben", use_container_width=True):
+                                        move_edu_up(idx)
+                                with cols[1]:
+                                    if st.button("↓", key=f"edu_down_{idx}", help="Nach unten verschieben", use_container_width=True):
+                                        move_edu_down(idx)
                                 
                                 # Option zum Löschen dieser Ausbildung
                                 include = st.checkbox(f"Diese Ausbildung einbeziehen", value=True, key=f"edu_{idx}")
@@ -2040,19 +2120,70 @@ if st.session_state.step == 1:
                         # Weiterbildung
                         st.markdown("### Weiterbildung")
                         
+                        # Sortieroptionen für Weiterbildung
+                        training_sort_col1, training_sort_col2 = st.columns([3, 1])
+                        with training_sort_col1:
+                            st.markdown("**Sortierung der Weiterbildungen:**")
+                        with training_sort_col2:
+                            training_sort_order = st.selectbox(
+                                "Reihenfolge",
+                                options=["Neueste zuerst", "Älteste zuerst"],
+                                index=0,
+                                key="training_sort_order"
+                            )
+                        
                         # Liste für editierte Weiterbildungen
                         edited_training = []
                         
-                        for idx, weiterbildung in enumerate(profile_data.get("weiterbildungen", [])):
+                        # Sortiere Weiterbildungen nach Zeitraum
+                        weiterbildungen = profile_data.get("weiterbildungen", [])
+                        if training_sort_order == "Neueste zuerst":
+                            weiterbildungen = sort_by_time_period(weiterbildungen, reverse=True)
+                        else:
+                            weiterbildungen = sort_by_time_period(weiterbildungen, reverse=False)
+                        
+                        # Weiterbildungen nach Sortierung in der Session speichern, wenn noch nicht vorhanden
+                        if 'weiterbildung_items' not in st.session_state:
+                            st.session_state.weiterbildung_items = weiterbildungen
+                        else:
+                            # Nur aktualisieren, wenn Sortierung geändert wurde
+                            if training_sort_order != st.session_state.get('training_sort_order_last', ''):
+                                st.session_state.weiterbildung_items = weiterbildungen
+                                st.session_state.training_sort_order_last = training_sort_order
+                        
+                        # Funktion zum Verschieben eines Elements nach oben
+                        def move_training_up(index):
+                            if index > 0:
+                                st.session_state.weiterbildung_items[index], st.session_state.weiterbildung_items[index-1] = st.session_state.weiterbildung_items[index-1], st.session_state.weiterbildung_items[index]
+                                st.rerun()
+                        
+                        # Funktion zum Verschieben eines Elements nach unten
+                        def move_training_down(index):
+                            if index < len(st.session_state.weiterbildung_items) - 1:
+                                st.session_state.weiterbildung_items[index], st.session_state.weiterbildung_items[index+1] = st.session_state.weiterbildung_items[index+1], st.session_state.weiterbildung_items[index]
+                                st.rerun()
+                        
+                        # Weiterbildungen aus der Session verwenden
+                        for idx, weiterbildung in enumerate(st.session_state.weiterbildung_items):
                             with st.expander(f"{weiterbildung.get('zeitraum', 'Neue Weiterbildung')}: {weiterbildung.get('bezeichnung', '')}", expanded=False):
                                 training_data = {}
                                 col1, col2 = st.columns(2)
                                 with col1:
-                                    training_data["zeitraum"] = st.text_input(f"Zeitraum (Weiterbildung) #{idx+1}", value=weiterbildung.get("zeitraum", ""))
+                                    training_data["zeitraum"] = st.text_input(f"Zeitraum (Weiterbildung) #{idx+1}", value=weiterbildung.get("zeitraum", ""), key=f"weiter_zeit_demo_{idx}")
                                 with col2:
-                                    training_data["bezeichnung"] = st.text_input(f"Bezeichnung #{idx+1}", value=weiterbildung.get("bezeichnung", ""))
+                                    training_data["bezeichnung"] = st.text_input(f"Bezeichnung #{idx+1}", value=weiterbildung.get("bezeichnung", ""), key=f"bezeichnung_demo_{idx}")
                                     
                                 training_data["abschluss"] = st.text_input(f"Abschluss (Weiterbildung) #{idx+1}", value=weiterbildung.get("abschluss", ""))
+                                
+                                # Steuerelemente zum Ändern der Reihenfolge
+                                st.markdown("##### Position anpassen")
+                                cols = st.columns([1, 1, 3])
+                                with cols[0]:
+                                    if st.button("↑", key=f"training_up_{idx}", help="Nach oben verschieben", use_container_width=True):
+                                        move_training_up(idx)
+                                with cols[1]:
+                                    if st.button("↓", key=f"training_down_{idx}", help="Nach unten verschieben", use_container_width=True):
+                                        move_training_down(idx)
                                 
                                 # Option zum Löschen dieser Weiterbildung
                                 include = st.checkbox(f"Diese Weiterbildung einbeziehen", value=True, key=f"train_{idx}")
@@ -2181,8 +2312,13 @@ if st.session_state.step == 1:
                                     profile_path = generator.generate_profile(edited_data_to_use, output_path, template=template_to_use)
                                     st.session_state.preview_pdf = profile_path
                                     
-                                    # Zeige eine Erfolgsmeldung an
-                                    st.success("Profil erfolgreich generiert!")
+                                    # Vergewissere, dass die PDF-Datei existiert
+                                    if os.path.exists(profile_path) and os.path.getsize(profile_path) > 0:
+                                        # Zeige eine Erfolgsmeldung an
+                                        st.success("Profil erfolgreich generiert!")
+                                    else:
+                                        st.error("Die generierte PDF konnte nicht gefunden werden oder ist leer.", icon="🚫")
+                                        st.session_state.preview_pdf = None
                                     
                                     # Speichere das ausgewählte Template für zukünftige Aktualisierungen
                                     st.session_state.selected_template = template_to_use
@@ -2194,8 +2330,26 @@ if st.session_state.step == 1:
                             st.markdown("#### Profil-Vorschau")
                             # Prüfen ob die Datei existiert, bevor wir versuchen sie anzuzeigen
                             if st.session_state.preview_pdf and os.path.exists(st.session_state.preview_pdf):
-                                pdf_display = display_pdf(st.session_state.preview_pdf)
-                                st.markdown(pdf_display, unsafe_allow_html=True)
+                                # PDF-Vorschau anzeigen mit verbesserter Methode
+                                # Die neue display_pdf Funktion zeigt die PDF direkt an oder liefert None zurück
+                                display_result = display_pdf(st.session_state.preview_pdf)
+                                
+                                # Wenn die PDF nicht angezeigt werden konnte, zeige zusätzliche Hilfe an
+                                if display_result is None:
+                                    st.warning("Die PDF-Vorschau konnte nicht vollständig angezeigt werden. Sie können die PDF aber trotzdem herunterladen.", icon="⚠️")
+                                    
+                                    # Biete Download-Button als Alternative an
+                                    try:
+                                        with open(st.session_state.preview_pdf, "rb") as file:
+                                            st.download_button(
+                                                label="PDF direkt herunterladen",
+                                                data=file,
+                                                file_name="Profil.pdf",
+                                                mime="application/pdf",
+                                                key="direct_download_pdf2"
+                                            )
+                                    except Exception as e:
+                                        st.error(f"Fehler beim Laden der PDF: {str(e)}", icon="🚫")
                             else:
                                 st.error("Die PDF-Vorschau ist nicht verfügbar. Bitte generieren Sie die Vorschau erneut.")
                             
