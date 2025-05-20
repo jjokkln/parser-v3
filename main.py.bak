@@ -565,8 +565,6 @@ if 'saved_api_key' not in st.session_state:
     # Lade den gespeicherten API-Key
     st.session_state.saved_api_key = config.get_openai_api_key()
 
-
-
 # Hilfsfunktionen
 def reset_session():
     """Setzt die Session zurück"""
@@ -654,110 +652,7 @@ st.markdown("""
 
 # Sidebar für Einstellungen
 with st.sidebar:
-    st.header("Einstellungen")
-    
-    # Statusleiste für den aktuellen Arbeitsschritt
-    st.divider()
-    st.subheader("Status")
-    
-    # Aktuelle Schritte bestimmen
-    current_step = st.session_state.step
-    steps = {
-        1: "Datei hochladen", 
-        2: "Daten bearbeiten", 
-        3: "Profil exportieren"
-    }
-    
-    # Statusleiste anzeigen
-    st.markdown("""
-    <style>
-        .status-step {
-            padding: 8px 12px;
-            margin: 5px 0;
-            border-radius: 8px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-        }
-        .active-step {
-            background-color: rgba(76, 175, 80, 0.3);
-            border-left: 4px solid #4CAF50;
-        }
-        .completed-step {
-            background-color: rgba(76, 175, 80, 0.1);
-            border-left: 4px solid rgba(76, 175, 80, 0.4);
-            color: rgba(255, 255, 255, 0.7);
-        }
-        .pending-step {
-            background-color: rgba(255, 255, 255, 0.05);
-            border-left: 4px solid rgba(255, 255, 255, 0.1);
-            color: rgba(255, 255, 255, 0.5);
-        }
-        .step-icon {
-            margin-right: 8px;
-            font-size: 16px;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    for step_num, step_name in steps.items():
-        if step_num < current_step:
-            # Abgeschlossener Schritt
-            st.markdown(f"""
-            <div class="status-step completed-step">
-                <span class="step-icon">✓</span> {step_num}. {step_name}
-            </div>
-            """, unsafe_allow_html=True)
-        elif step_num == current_step:
-            # Aktueller Schritt
-            st.markdown(f"""
-            <div class="status-step active-step">
-                <span class="step-icon">▶</span> {step_num}. {step_name}
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            # Ausstehender Schritt
-            st.markdown(f"""
-            <div class="status-step pending-step">
-                <span class="step-icon">○</span> {step_num}. {step_name}
-            </div>
-            """, unsafe_allow_html=True)
-    
-    # Allgemeine Einstellungen
-    st.divider()
-    all_settings = config.get_all_settings()
-    
-    # Template-Auswahl als Voreinstellung
-    st.subheader("Voreinstellungen")
-    template_options = {
-        "professional": "Professionell", 
-        "classic": "Klassisch", 
-        "modern": "Modern", 
-        "minimalist": "Minimalistisch"
-    }
-    default_template = all_settings.get("default_template", "professional")
-    selected_template = st.selectbox(
-        "Standard-Vorlage",
-        options=list(template_options.keys()),
-        format_func=lambda x: template_options[x],
-        index=list(template_options.keys()).index(default_template),
-        key="template_select"
-    )
-    
-    # Speichere die Template-Voreinstellung, wenn sie sich geändert hat
-    if selected_template != default_template:
-        config.update_setting("default_template", selected_template)
-    
-    # Einstellung zum Anzeigen des extrahierten Textes
-    show_text_default = all_settings.get("show_extracted_text", False)
-    show_text_setting = st.checkbox(
-        "Extrahierten Text standardmäßig anzeigen", 
-        value=show_text_default
-    )
-    
-    # Speichere die Textanzeige-Einstellung, wenn sie sich geändert hat
-    if show_text_setting != show_text_default:
-        config.update_setting("show_extracted_text", show_text_setting)
+    st.header("Informationen")
     
     # Cache-Management in die Seitenleiste verschoben
     st.divider()
@@ -860,7 +755,29 @@ if st.session_state.step == 1:
                 st.session_state.extracted_text = extracted_text
                 st.session_state.profile_data = profile_data
 
-                # Speichere die Ergebnisse für die spätere Anzeige am Ende der Seite
+                # Zeige Ergebnisse basierend auf dem ausgewählten Modus
+                if "Umgekehrt" in processing_mode:
+                    # Zeige zuerst die Profildaten an
+                    st.subheader("Analysierte Daten")
+                    st.json(profile_data)
+                    
+                    # Dann den extrahierten Text
+                    show_text = config.get_all_settings().get("show_extracted_text", False)
+                    with st.expander("Extrahierten Text anzeigen", expanded=False):
+                        st.text_area("Extrahierter Text", extracted_text, height=300)
+                else:
+                    # Zeige zuerst den extrahierten Text an
+                    st.subheader("Extrahierter Text")
+                    
+                    # Verwende die Einstellung zur Anzeige des extrahierten Textes
+                    show_text = config.get_all_settings().get("show_extracted_text", False)
+                    with st.expander("Extrahierten Text anzeigen", expanded=False):
+                        st.text_area("Extrahierter Text", extracted_text, height=300)
+                    
+                    # Dann die Profildaten
+                    st.subheader("Analysierte Daten")
+                    with st.expander("Analysierte Daten anzeigen", expanded=False):
+                        st.json(profile_data)
                 
                 # Zeige einen Erfolgshinweis an
                 st.markdown("""
@@ -1203,27 +1120,8 @@ if st.session_state.step == 1:
                     # Profil generieren und Vorschau anzeigen
                     st.markdown("### Profilvorschau und Export")
                     
-                    # Zuerst prüfen, ob edited_data in der Session verfügbar ist und wenn nicht, initialisieren
-                    if "edited_data" not in st.session_state:
-                        # Vorbereitete Daten für Tab2 erstellen
-                        complete_edited_data = {
-                            "persönliche_daten": {
-                                "name": profile_data.get("persönliche_daten", {}).get("name", ""),
-                                "wohnort": profile_data.get("persönliche_daten", {}).get("wohnort", ""),
-                                "jahrgang": profile_data.get("persönliche_daten", {}).get("jahrgang", ""),
-                                "führerschein": profile_data.get("persönliche_daten", {}).get("führerschein", ""),
-                                "kontakt": profile_data.get("persönliche_daten", {}).get("kontakt", {})
-                            },
-                            "berufserfahrung": profile_data.get("berufserfahrung", []),
-                            "ausbildung": profile_data.get("ausbildung", []),
-                            "weiterbildungen": profile_data.get("weiterbildungen", []),
-                            "wunschgehalt": profile_data.get("wunschgehalt", "")
-                        }
-                        # In Session State speichern
-                        st.session_state.edited_data = complete_edited_data
-                    
-                    # Profildaten aus der Session holen
-                    edited_data_to_use = st.session_state.edited_data
+                    # Profildaten aus der Session holen oder aus den aktuellen bearbeiteten Daten
+                    edited_data_to_use = st.session_state.edited_data if "edited_data" in st.session_state else complete_edited_data
                     
                     # Vorlage auswählen
                     st.markdown("#### Vorlage auswählen")
@@ -1365,18 +1263,11 @@ if st.session_state.step == 1:
                                     )
                             except Exception as e:
                                 st.error(f"Fehler bei der Word-Dokument-Generierung: {str(e)}")
-            
             except Exception as e:
                 st.error(f"Fehler bei der Verarbeitung: {str(e)}")
             
-    elif uploaded_file and not openai_api_key:
-        st.warning("Bitte gib einen OpenAI API Key in der Seitenleiste ein, um fortzufahren.")
-
-# Der Schritt 2 wird nicht mehr benötigt, da er direkt in Schritt 1 integriert wurde
-elif st.session_state.step == 2:
-    # Zurück zum Schritt 1 umleiten
-    st.session_state.step = 1
-    st.rerun()
+            if uploaded_file and not openai_api_key:
+                st.warning("Bitte gib einen OpenAI API Key in der Seitenleiste ein, um fortzufahren.")
 
 # Footer
 st.divider()
