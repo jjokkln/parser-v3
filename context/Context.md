@@ -41,7 +41,13 @@ CV2Profile/
 │   │
 │   ├── templates/                 # Template-Generierung
 │   │   ├── __init__.py           # Package-Initialisierung
-│   │   └── template_generator.py # PDF-Profilgenerierung
+│   │   ├── template_generator.py # PDF-Profilgenerierung
+│   │   └── designs/              # Design-Vorlagen
+│   │       ├── README.md         # Dokumentation für Design-Vorlagen
+│   │       ├── classic/          # Klassisches Design
+│   │       ├── modern/           # Modernes Design (zweispaltig)
+│   │       ├── professional/     # Professionelles Design
+│   │       └── minimalist/       # Minimalistisches Design
 │   │
 │   └── __init__.py               # Hauptpackage-Initialisierung
 │

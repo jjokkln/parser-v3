@@ -1,138 +1,35 @@
-# CV2Profile
+# context - Projektdokumentation und -kontext
 
-Ein KI-gestützter CV-Parser, der Lebensläufe analysiert und in standardisierte Profile konvertiert.
+Dieses Verzeichnis enthält Dokumentation und Kontext für das CV2Profile-Parser-Projekt, einschließlich Fortschrittsverfolgung, Aufgabenplanung und Entwicklungszusammenfassungen.
 
-## Projektbeschreibung
+## Hauptdateien
 
-CV2Profile ist ein leistungsstarker CV-Parser, der mit Hilfe von KI-Technologie (OpenAI) Lebensläufe automatisch analysiert und in standardisierte Profile konvertiert. Die Anwendung unterstützt verschiedene Dokumentformate (PDF, DOCX, JPG, PNG), extrahiert Text, identifiziert relevante Informationen und erstellt professionelle PDF-Profile.
+- **Context.md**: Hauptdokumentation des Projekts
+  - Enthält eine detaillierte Übersicht über die Anwendung
+  - Beschreibt die Projektstruktur, Hauptfunktionen und technischen Komponenten
+  - Dient als zentrale Referenz für das Verständnis des Projekts
 
-## Projektstruktur
+- **ActiveContext.md**: Aktiver Arbeitskontext
+  - Enthält Informationen über aktuelle Aufgaben und den Status des Projekts
+  - Wird regelmäßig aktualisiert, um den aktuellen Schwerpunkt der Entwicklung widerzuspiegeln
+  - Dient als Leitfaden für die aktuellen Entwicklungsaktivitäten
 
-Die Anwendung ist wie folgt organisiert:
+- **progress.md**: Fortschrittsverfolgung und Aufgabenplanung
+  - Verfolgt den Fortschritt des Projekts
+  - Enthält Listen von geplanten und abgeschlossenen Aufgaben
+  - Dient als Werkzeug für die Projektplanung und -verwaltung
 
-```
-CV2Profile/
-│
-├── src/                        # Quellcode-Verzeichnis
-│   ├── core/                   # Kernfunktionen
-│   │   ├── document_processor.py  # Dokumentenverarbeitung
-│   │   ├── ai_extractor.py        # KI-basierte Datenextraktion
-│   │   └── combined_processor.py  # Kombinierte Verarbeitung
-│   │
-│   ├── ui/                     # Benutzeroberfläche
-│   │   └── app.py              # Streamlit-basierte Hauptanwendung
-│   │
-│   ├── utils/                  # Hilfsfunktionen
-│   │   └── config.py           # Konfigurationsverwaltung
-│   │
-│   └── templates/              # Template-Generierung
-│       └── template_generator.py  # PDF-Profilgenerierung
-│
-├── sources/                    # Ressourcen
-│   ├── Galdoralogo.png         # Logo für PDF-Dokumente
-│   ├── Profilvorlage Seite 1.png # Vorlagendesign Seite 1
-│   └── Profilvorlage Seite 2.png # Vorlagendesign Seite 2
-│
-├── context/                    # Projekt-Dokumentation
-│   ├── Context.md              # Hauptprojektkontext
-│   ├── summary*.md             # Zusammenfassungen der Projektentwicklung
-│   └── README.md               # Diese Datei
-│
-├── archive/                    # Archivierte Codeversionen
-│   ├── README.md               # Hinweise zu archivierten Dateien
-│   ├── app_versions/          # Alte Versionen der Hauptapp und UI-Fixes
-│   │   ├── README.md           # Warnhinweis zu alten App-Versionen
-│   │   ├── app_original.py    # Ursprüngliche App-Version
-│   │   ├── app_new.py         # Neuere App-Version
-│   │   ├── app.py.bak         # Backup der App
-│   │   ├── app_ui_fixed.py    # Version mit UI-Fixes
-│   │   ├── app_ui_fixed_new.py # Neuere Version mit UI-Fixes
-│   │   ├── fix_app_ui.py      # UI-Fix-Skript
-│   │   └── fix_app_ui_improved.py # Verbessertes UI-Fix-Skript
-│   │
-│   └── old_files/             # Alte Dateien aus dem Hauptverzeichnis
-│       ├── README.md           # Warnhinweis zu alten Moduldateien
-│       ├── ai_extractor.py    # Alte KI-Extraktionslogik
-│       ├── combined_processor.py # Alte kombinierte Prozessorversion
-│       ├── config.py          # Alte Konfigurationsversion
-│       ├── document_processor.py # Alte Dokumentenprozessorversion
-│       ├── template_generator.py # Alte Template-Generator-Version
-│       └── app.py             # Alte Hauptanwendung
-│
-├── main.py                     # Haupteinstiegspunkt
-├── run.sh                      # Ausführungsskript
-├── archive_notice.py           # Warnhinweis zu archivierten Dateien
-└── requirements.txt            # Abhängigkeiten
-```
+- **globalsummary.md**: Globale Zusammenfassung
+  - Bietet einen übergreifenden Überblick über den Projektverlauf
+  - Fasst die wichtigsten Entwicklungsschritte und Meilensteine zusammen
 
-## Installation
+- **summary*.md**: Versionsbasierte Zusammenfassungen
+  - Eine Reihe von Dateien, die Zusammenfassungen für verschiedene Entwicklungsiterationen enthalten
+  - Jede Datei dokumentiert spezifische Änderungen, Verbesserungen und Fehlerbehebungen
+  - Dienen als chronologische Dokumentation der Projektentwicklung
 
-1. Repository klonen
-2. Virtuelle Umgebung erstellen und aktivieren:
-   ```
-   python -m venv venv
-   source venv/bin/activate  # Unter Windows: venv\Scripts\activate
-   ```
-3. Abhängigkeiten installieren:
-   ```
-   pip install -r requirements.txt
-   ```
-4. OpenAI API-Key einrichten:
-   - Setze die Umgebungsvariable `OPENAI_API_KEY`
-   - Oder speichere den Key über die Anwendung
+## Verwendung
 
-## Anwendung starten
+Dieses Verzeichnis dient hauptsächlich als Referenz für Entwickler, die am Projekt arbeiten. Es bietet wichtige Kontextinformationen, die für das Verständnis des Projekts, seiner Ziele und seines aktuellen Status erforderlich sind.
 
-Mit dem run.sh-Skript:
-```
-./run.sh
-```
-
-Oder mit Python:
-```
-python main.py
-```
-
-Oder direkt mit Streamlit:
-```
-streamlit run src/ui/app.py
-```
-
-## Kernfunktionalitäten
-
-- **Dokumentenverarbeitung und Textextraktion** aus verschiedenen Dateiformaten
-- **KI-gestützte Analyse** mittels OpenAI-API
-- **Profilgenerierung** in verschiedenen Templates (Klassisch, Modern, Professionell, Minimalistisch)
-- **Konfigurationsmanagement** mit sicherer API-Key-Speicherung
-- **Ansprechpartner-Verwaltung** über Dropdown-Menü
-- **Moderne UI** mit Glasmorphismus-Design
-
-## Hinweise zur Projektstruktur
-
-Die Anwendung wurde aufgeräumt und neu strukturiert. Alle Dateien aus dem Hauptverzeichnis wurden in die entsprechenden Unterverzeichnisse verschoben oder archiviert. Ältere Versionen wurden im `archive`-Verzeichnis gesammelt, um die Projekthistorie zu bewahren, aber die Struktur übersichtlicher zu gestalten.
-
-Die aktuelle Version der Anwendung basiert vollständig auf den Dateien im `src`-Verzeichnis und nutzt den standardisierten Import-Pfad des Pakets.
-
-## Import-Pfade
-
-Bei der Entwicklung ist zu beachten, dass die Anwendung jetzt strukturierte Import-Pfade verwendet:
-
-```python
-from src.core.document_processor import DocumentProcessor
-from src.core.ai_extractor import AIExtractor
-from src.core.combined_processor import CombinedProcessor
-from src.templates.template_generator import ProfileGenerator
-import src.utils.config as config
-```
-
-Die alten Dateien im Archiv verwendeten absolute Imports und sind nicht mehr kompatibel:
-
-```python
-from document_processor import DocumentProcessor
-from ai_extractor import AIExtractor
-from combined_processor import CombinedProcessor
-from template_generator import ProfileGenerator
-import config
-```
-
-Um versehentliche Verwendung der alten Dateien zu verhindern, wurden Warnhinweise in den Archivverzeichnissen platziert.
+Die Dateien in diesem Verzeichnis sollten regelmäßig aktualisiert werden, um sicherzustellen, dass sie den aktuellen Stand des Projekts genau widerspiegeln.

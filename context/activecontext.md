@@ -1,64 +1,71 @@
-# Aktive Erinnerungen zum CV2Profile-Projekt
+# ActiveContext: CV2Profile Parser - Aktuelle Aufgaben und Status
 
-## Aktueller Stand und Fortschritt
+Datum: 29-05-2024
 
-Ich habe ein Feature für das CV2Profile-Projekt implementiert, das es Benutzern ermöglicht, ihre Profile nicht nur im PDF-Format, sondern auch im Word-Format herunterzuladen. Beide Formate haben genau das gleiche Layout und Design.
+## Projektübersicht
 
-## Implementierungsdetails
+Der CV2Profile Parser ist ein KI-gestütztes Tool zur Analyse von Lebensläufen und Konvertierung in standardisierte Profile. Die Anwendung nutzt OpenAI-Modelle zur Extraktion relevanter Informationen aus verschiedenen Dokumenttypen (PDF, DOCX, JPG, PNG) und generiert strukturierte Profile im PDF- und DOCX-Format mit verschiedenen Designvorlagen.
 
-1. Die `template_generator.py` wurde erweitert, um auch Word-Dokumente zu erstellen:
-   - Die `generate_profile`-Methode wurde mit einem zusätzlichen Parameter `format` erweitert, der zwischen "pdf" und "docx" unterscheiden kann
-   - Eine neue Methode `_generate_docx_profile` wurde implementiert, die die Daten in ein Word-Dokument mit gleichem Layout umwandelt
-   - Die bestehende PDF-Generierung wurde in eine separate Methode `_generate_pdf_profile` ausgelagert
-   - Das Logo wird jetzt sowohl im PDF- als auch im Word-Format eingefügt, für eine einheitliche visuelle Identität
+## Aktueller Status
 
-2. Die Benutzeroberfläche in `app.py` wurde angepasst:
-   - Nach dem "Profil generieren"-Schritt wird jetzt ein Radio-Button angezeigt, mit dem Benutzer zwischen PDF und Word wählen können
-   - Je nach Auswahl wird das entsprechende Dokument generiert und zum Download angeboten
+Der Parser befindet sich in einer fortgeschrittenen Entwicklungsphase mit folgenden implementierten Hauptfunktionen:
 
-3. Feature zur Verfügbarkeitsangabe des Bewerbers hinzugefügt:
-   - In Schritt 2 (Profil bearbeiten) wurde ein neuer Abschnitt "Verfügbarkeit" ergänzt
-   - Dropdown-Menü zur Auswahl des Verfügbarkeitsstatus (z.B. "Sofort verfügbar", "Kündigungsfrist 1 Monat", etc.)
-   - Textfeld für zusätzliche Details zur Verfügbarkeit
-   - Die Verfügbarkeitsinformationen werden in den Profildaten gespeichert und in beiden Ausgabeformaten angezeigt
-   - Die Informationen erscheinen unter dem Wunschgehalt im Abschnitt "INFORMATIONEN ZUR BEWERBUNG"
+- **Dokumentenverarbeitung** für PDF, DOCX, JPG und PNG
+- **Text-Extraktion** mit direkter Extraktion und OCR-Fallback
+- **KI-gestützte Analyse** mit OpenAI-Modellen
+- **Profilgenerierung** in verschiedenen Templates (Klassisch, Modern, Professionell, Minimalistisch)
+- **Benutzerfreundliche UI** mit Streamlit
+- **Word-Export-Funktionalität** mit einheitlichem Layout
+- **Verfügbarkeitsangabe für Bewerber**
+- **API-Key-Verwaltung** mit sicherer Speicherung
+- **Benutzerverwaltete Einstellungen** für Templates und weitere Optionen
 
-## Fehlerbehebung
+## Zu erledigende Aufgaben
 
-### 1. Fehler: "name 'generator' is not defined"
-- Es gab einen Fehler beim Herunterladen im Word-Format: "name 'generator' is not defined"
-- Das Problem lag darin, dass im else-Zweig (für Word-Downloads) auf die Variable `generator` zugegriffen wurde, ohne dass diese im entsprechenden Scope definiert war
-- Die Lösung bestand darin, im Word-Download-Zweig eine neue Instanz von `ProfileGenerator` zu erstellen, bevor auf deren `generate_profile`-Methode zugegriffen wird:
-  ```python
-  # Stelle sicher, dass generator definiert ist
-  generator = ProfileGenerator()
-  ```
-- Diese Änderung wurde an zwei Stellen im Code vorgenommen (für den normalen Modus und den Demo-Modus)
+Die folgenden Aufgaben müssen noch abgeschlossen werden:
 
-### 2. Fehler: "no style with name 'Italic'"
-- Nach der Behebung des ersten Fehlers trat ein weiteres Problem auf: "no style with name 'Italic'"
-- Das Problem lag darin, dass in der DOCX-Generierung versucht wurde, den Style 'Italic' zu verwenden, der in DOCX standardmäßig nicht existiert
-- Die Lösung bestand darin, einen eigenen italienischen Stil explizit zu erstellen:
-  ```python
-  # Erstelle Italic Style
-  italic_style = doc.styles.add_style('ItalicStyle', docx.enum.style.WD_STYLE_TYPE.PARAGRAPH)
-  italic_style.font.size = Pt(10)
-  italic_style.font.italic = True
-  ```
-- Anschließend wurden alle Vorkommen von `style='Italic'` durch `style='ItalicStyle'` ersetzt
+### 1. Einstellungsbutton aktiv machen
+- Fehleranalyse und -behebung des aktuellen Einstellungsbuttons
+- Korrekte Verlinkung zur Einstellungsseite (`src/ui/pages/01_⚙️_Einstellungen.py`)
+- Sicherstellen, dass die Navigation zwischen Hauptseite und Einstellungen reibungslos funktioniert
 
-### 3. Fehlende Logo-Integration im Word-Format
-- Nach der Implementierung des Word-Exports wurde festgestellt, dass das Logo im Word-Dokument fehlte
-- Die Logo-Integration wurde im Word-Format analog zum PDF-Format implementiert:
-  - Der Pfad zum Logo wird bestimmt (gleich wie bei PDF)
-  - Überprüfung der Existenz der Datei
-  - Einfügen des Logos mit `run.add_picture(logo_path, width=Cm(5))`
-  - Sowohl auf der ersten Seite als auch auf der Ansprechpartner-Seite
-  - Fallback auf Textversion, wenn das Logo nicht gefunden wird
+### 2. Statusleiste einsatzbereit machen
+- Implementierung der visuellen Statusleiste für Benutzerfortschritt
+- Anzeige der drei Hauptschritte: Datei hochladen, Daten bearbeiten, Profil exportieren
+- Integration in die Benutzeroberfläche mit konsistentem Design
+- Implementierung der logischen Statusübergänge basierend auf Benutzeraktionen
 
-## Nächste Schritte und Hinweise
+### 3. Verschiedene Profilvorlagen erstellen und einsatzbereit machen
+- Entwicklung und Implementierung neuer Profilvorlagen zusätzlich zu den bestehenden
+- Sicherstellen, dass alle Vorlagen für PDF- und DOCX-Export funktionieren
+- Konsistentes Design zwischen verschiedenen Exportformaten
+- Integration der Vorlagen in die Benutzeroberfläche mit Vorschaumöglichkeit
 
-- Die Download-Funktionalität für Word-Dateien ist jetzt vollständig implementiert und funktional
-- Die Benutzer können jetzt frei zwischen PDF und Word wählen, mit einheitlichem Layout und Design inklusive Logo
-- Die Angabe der Verfügbarkeit des Bewerbers bietet zusätzliche wertvolle Informationen für Personalentscheider
-- Die Lösung wurde so minimal wie möglich gehalten, um nur die spezifischen Probleme zu beheben
+### 4. PDF-Vorschau auf Streamlit anzeigen
+- Implementierung einer integrierten PDF-Vorschau direkt in der Streamlit-Anwendung
+- Behebung bekannter Fehler bei der PDF-Vorschau (z.B. `TypeError` bei `None`-Werten)
+- Optimierung der Darstellung für verschiedene Bildschirmgrößen
+
+### 5. Demo-Modus richtig funktionsfähig machen
+- Fehlerfreies Durchlaufen des gesamten Workflows im Demo-Modus
+- Klare Kennzeichnung des Demo-Modus in der Benutzeroberfläche
+
+### 6. Profilbildfunktion einfügen in moderner Profilvorlage
+- Erweiterung der modernen Profilvorlage um Profilbildunterstützung
+- Implementierung der automatischen Größenanpassung für Profilbilder
+- Konsistente Integration in PDF- und DOCX-Formate
+- Benutzerfreundliche Upload- und Bearbeitungsmöglichkeiten für Profilbilder
+
+## Bekannte Probleme
+
+- Fehler bei der PDF-Vorschau, wenn `st.session_state.preview_pdf` den Wert `None` hat
+- Die Drag & Drop-Funktionalität setzt auf Pfeiltasten statt echter Drag & Drop-Interaktion mit der Maus
+- Mögliche Probleme bei der Anzeige von Bildern in HTTPS-Umgebungen
+
+## Nächste Schritte nach Abschluss der aktuellen Aufgaben
+
+- Verbesserung der API-Key-Validierung mit Testfunktionalität
+- Implementierung echter Drag & Drop-Funktionalität mit Maus-/Touch-Gesten
+- Erweiterung der Sprachunterstützung (aktuell nur Deutsch vollständig unterstützt)
+- Verbesserung der KI-Extraktion durch Feintuning
+- Integration mit ATS (Applicant Tracking Systems) 

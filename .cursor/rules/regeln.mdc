@@ -1,7 +1,7 @@
 ---
 description: 
 globs: 
-alwaysApply: false
+alwaysApply: true
 ---
 Cursor Rules
 
@@ -10,7 +10,7 @@ IMMER ALLE REGELN STRIKT BEFOLGEN
 IMMER AUF DEUTSCH ANTWORTEN
 
 	•	Summary:
-1. Nach jedem Chat summary/summary-[dd-mm-hh].md erstellen mit:
+1. Nach jedem Chat in dem ordner "context" summary-[dd-mm-hh].md erstellen mit:
 – Zeitstempel, Projektstruktur, Änderungen, erledigte Tasks, Probleme
 2. Immer @context Projektstruktur nach Änderungen anpassen
 
@@ -19,7 +19,6 @@ IMMER AUF DEUTSCH ANTWORTEN
 	•	MCPCheck:
 MCPs prüfen und ggf. anwenden
 - Für summary.md Zeit im Internet holen
-- Für BrowsertoolsMCP im Terminal "npx @agentdeskai/browser-tools-server@1.2.0"" ausführen
 - Für nGrok: brew install ngrok -> ngrok config add-authtoken 2x5QB5zxCW5OA2ipqdTjEYvwBpu_4T6rcqYtiig7MnZFEVHNZ 
 -> ngrok http http://localhost[…]
 
@@ -28,9 +27,7 @@ MCPs prüfen und ggf. anwenden
 	•	FileLoading:
 project-structure, context.md, neueste summary.md lesen und kontext verstehen
 
-
-	•	Localhost:
-Nach jeder Task automatisch Server starten
-
+localhost:
+- Nutze für sh run.sh um den localhost zu starten
 
 

@@ -564,99 +564,8 @@ if 'temp_files' not in st.session_state:
 if 'saved_api_key' not in st.session_state:
     # Lade den gespeicherten API-Key
     st.session_state.saved_api_key = config.get_openai_api_key()
-if 'demo_mode' not in st.session_state:
-    st.session_state.demo_mode = False
 
-# Beispieldaten für den Demo-Modus
-DEMO_PROFILE_DATA = {
-    "persönliche_daten": {
-        "name": "Max Mustermann",
-        "wohnort": "Hamburg",
-        "jahrgang": "1985",
-        "führerschein": "Klasse B",
-        "kontakt": {
-            "ansprechpartner": "Kai Fischer",
-            "telefon": "02161 62126-02",
-            "email": "fischer@galdora.de"
-        }
-    },
-    "berufserfahrung": [
-        {
-            "zeitraum": "01/2018 - heute",
-            "position": "Senior Frontend Developer",
-            "unternehmen": "TechCorp GmbH, Hamburg",
-            "aufgaben": [
-                "Entwicklung und Wartung von React-basierten Webanwendungen",
-                "Code Reviews und Mentoring von Junior Entwicklern",
-                "Implementierung von CI/CD Pipelines",
-                "Migration von Legacy-Code zu modernen React-Komponenten"
-            ]
-        },
-        {
-            "zeitraum": "03/2015 - 12/2017",
-            "position": "Web Developer",
-            "unternehmen": "WebSolutions AG, Berlin",
-            "aufgaben": [
-                "Entwicklung von responsive Websites mit HTML, CSS und JavaScript",
-                "Zusammenarbeit mit Designern und Backend-Entwicklern",
-                "Integration von RESTful APIs"
-            ]
-        }
-    ],
-    "ausbildung": [
-        {
-            "zeitraum": "10/2010 - 02/2015",
-            "abschluss": "Bachelor of Science in Informatik",
-            "institution": "Technische Universität Berlin",
-            "note": "1,8",
-            "schwerpunkte": "Webentwicklung, Datenbanken, Softwarearchitektur"
-        }
-    ],
-    "weiterbildungen": [
-        {
-            "zeitraum": "05/2019",
-            "bezeichnung": "React Advanced Masterclass",
-            "abschluss": "Online-Kurs"
-        },
-        {
-            "zeitraum": "09/2017",
-            "bezeichnung": "Certified Scrum Developer",
-            "abschluss": "Scrum Alliance"
-        }
-    ],
-    "wunschgehalt": "65.000 € p.a."
-}
 
-DEMO_EXTRACTED_TEXT = """
-LEBENSLAUF
-MAX MUSTERMANN
-PERSÖNLICHE DATEN
-Name: Max Mustermann
-Wohnort: Hamburg
-Jahrgang: 1985
-Führerschein: Klasse B
-
-BERUFSERFAHRUNG
-01/2018 - heute: Senior Frontend Developer bei TechCorp GmbH, Hamburg
-- Entwicklung und Wartung von React-basierten Webanwendungen
-- Code Reviews und Mentoring von Junior Entwicklern
-- Implementierung von CI/CD Pipelines
-- Migration von Legacy-Code zu modernen React-Komponenten
-
-03/2015 - 12/2017: Web Developer bei WebSolutions AG, Berlin
-- Entwicklung von responsive Websites mit HTML, CSS und JavaScript
-- Zusammenarbeit mit Designern und Backend-Entwicklern
-- Integration von RESTful APIs
-
-AUSBILDUNG
-10/2010 - 02/2015: Bachelor of Science in Informatik, Technische Universität Berlin
-Note: 1,8
-Schwerpunkte: Webentwicklung, Datenbanken, Softwarearchitektur
-
-WEITERBILDUNGEN
-05/2019: React Advanced Masterclass, Online-Kurs
-09/2017: Certified Scrum Developer, Scrum Alliance
-"""
 
 # Hilfsfunktionen
 def reset_session():
@@ -678,8 +587,6 @@ def reset_session():
     else:
         # Initialisiere temp_files, falls es noch nicht existiert
         st.session_state.temp_files = []
-    # Demo-Modus zurücksetzen
-    st.session_state.demo_mode = False
 
 def display_pdf(file_path):
     """Zeigt ein PDF als Base64-String an"""
@@ -687,12 +594,12 @@ def display_pdf(file_path):
     if file_path is None:
         # Zeige eine Fehlermeldung statt des PDFs an
         print("Fehler: PDF-Pfad ist None")
-        return '<div style="text-align: center; padding: 20px; background-color: #f8d7da; color: #721c24; border-radius: 5px;">PDF-Vorschau nicht verfügbar. Bitte aktualisieren Sie die Vorschau.</div>'
+        return '<div style="text-align: center; padding: 20px; background-color: rgba(255, 70, 70, 0.2); color: white; border-radius: 5px; backdrop-filter: blur(5px);">PDF-Vorschau nicht verfügbar. Bitte aktualisieren Sie die Vorschau.</div>'
     
     # Prüfe, ob die Datei existiert
     if not os.path.exists(file_path):
         print(f"Fehler: PDF-Datei existiert nicht: {file_path}")
-        return '<div style="text-align: center; padding: 20px; background-color: #f8d7da; color: #721c24; border-radius: 5px;">PDF-Datei existiert nicht. Bitte generieren Sie die Vorschau erneut.</div>'
+        return '<div style="text-align: center; padding: 20px; background-color: rgba(255, 70, 70, 0.2); color: white; border-radius: 5px; backdrop-filter: blur(5px);">PDF-Datei existiert nicht. Bitte generieren Sie die Vorschau erneut.</div>'
     
     try:
         # Prüfe, ob die Datei eine gültige PDF-Datei ist
@@ -701,29 +608,37 @@ def display_pdf(file_path):
             # Prüfe auf PDF-Signatur (%PDF-)
             if not file_content.startswith(b'%PDF-'):
                 print(f"Fehler: Keine gültige PDF-Datei: {file_path}")
-                return '<div style="text-align: center; padding: 20px; background-color: #f8d7da; color: #721c24; border-radius: 5px;">Die Datei ist keine gültige PDF-Datei. Bitte generieren Sie die Vorschau erneut.</div>'
+                return '<div style="text-align: center; padding: 20px; background-color: rgba(255, 70, 70, 0.2); color: white; border-radius: 5px; backdrop-filter: blur(5px);">Die Datei ist keine gültige PDF-Datei. Bitte generieren Sie die Vorschau erneut.</div>'
             
             base64_pdf = base64.b64encode(file_content).decode('utf-8')
         
-        # Alternative PDF-Anzeige, die besser mit Chrome-Sicherheitsrichtlinien kompatibel ist
+        # Verbesserte PDF-Anzeige mit iframe und Fallback auf object für bessere Browser-Kompatibilität
         pdf_display = f'''
-        <div style="display: flex; justify-content: center; width: 100%; margin: 0 auto; border: 1px solid #ddd; border-radius: 5px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-            <object 
-                data="data:application/pdf;base64,{base64_pdf}" 
-                type="application/pdf"
+        <div style="display: flex; justify-content: center; width: 100%; margin: 0 auto; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.2); background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(5px);">
+            <embed 
+                src="data:application/pdf;base64,{base64_pdf}" 
                 width="100%" 
                 height="800"
-                style="border: none;">
-                <p>Ihr Browser kann PDFs nicht anzeigen. 
-                <a href="data:application/pdf;base64,{base64_pdf}" download="dokument.pdf">Klicken Sie hier, um das PDF herunterzuladen</a>.</p>
-            </object>
+                style="border: none; border-radius: 12px;"
+                type="application/pdf">
+        </div>
+
+        <div style="margin-top: 20px; text-align: center;">
+            <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem;">
+                Falls der Browser die PDF-Anzeige blockiert, können Sie das PDF direkt 
+                <a href="data:application/pdf;base64,{base64_pdf}" 
+                   download="dokument.pdf" 
+                   style="color: #4CAF50; text-decoration: none; font-weight: bold;">
+                   herunterladen
+                </a>.
+            </p>
         </div>
         '''
         return pdf_display
     except Exception as e:
         # Zeige eine Fehlermeldung bei sonstigen Problemen
         print(f"Fehler beim Laden der PDF-Vorschau: {str(e)}, Pfad: {file_path}")
-        return f'<div style="text-align: center; padding: 20px; background-color: #f8d7da; color: #721c24; border-radius: 5px;">Fehler beim Laden der PDF-Vorschau: {str(e)}</div>'
+        return f'<div style="text-align: center; padding: 20px; background-color: rgba(255, 70, 70, 0.2); color: white; border-radius: 5px; backdrop-filter: blur(5px);">Fehler beim Laden der PDF-Vorschau: {str(e)}</div>'
 
 # Seitentitel und Konfiguration
 st.set_page_config(page_title="CV2Profile Konverter", layout="wide")
@@ -758,92 +673,6 @@ with st.sidebar:
         </div>
     </a>
     """, unsafe_allow_html=True)
-    
-    # Demo-Modus Schalter
-    demo_mode = st.toggle("Demo-Modus", value=st.session_state.demo_mode, 
-                        help="Aktiviere den Demo-Modus, um direkt mit Beispieldaten zu arbeiten.")
-    
-    # Demo-Modus Status aktualisieren
-    if demo_mode != st.session_state.demo_mode:
-        st.session_state.demo_mode = demo_mode
-        if demo_mode:
-            # Demo-Daten laden
-            st.session_state.extracted_text = DEMO_EXTRACTED_TEXT
-            st.session_state.profile_data = DEMO_PROFILE_DATA
-        else:
-            # Daten zurücksetzen
-            st.session_state.extracted_text = ""
-            st.session_state.profile_data = {}
-            st.session_state.edited_data = {}
-        # Seite neu laden, um die Änderungen anzuzeigen
-        st.rerun()
-    
-    # Statusleiste für den aktuellen Arbeitsschritt
-    st.divider()
-    st.subheader("Status")
-    
-    # Aktuelle Schritte bestimmen
-    current_step = st.session_state.step
-    steps = {
-        1: "Datei hochladen", 
-        2: "Daten bearbeiten", 
-        3: "Profil exportieren"
-    }
-    
-    # Statusleiste anzeigen
-    st.markdown("""
-    <style>
-        .status-step {
-            padding: 8px 12px;
-            margin: 5px 0;
-            border-radius: 8px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-        }
-        .active-step {
-            background-color: rgba(76, 175, 80, 0.3);
-            border-left: 4px solid #4CAF50;
-        }
-        .completed-step {
-            background-color: rgba(76, 175, 80, 0.1);
-            border-left: 4px solid rgba(76, 175, 80, 0.4);
-            color: rgba(255, 255, 255, 0.7);
-        }
-        .pending-step {
-            background-color: rgba(255, 255, 255, 0.05);
-            border-left: 4px solid rgba(255, 255, 255, 0.1);
-            color: rgba(255, 255, 255, 0.5);
-        }
-        .step-icon {
-            margin-right: 8px;
-            font-size: 16px;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    for step_num, step_name in steps.items():
-        if step_num < current_step:
-            # Abgeschlossener Schritt
-            st.markdown(f"""
-            <div class="status-step completed-step">
-                <span class="step-icon">✓</span> {step_num}. {step_name}
-            </div>
-            """, unsafe_allow_html=True)
-        elif step_num == current_step:
-            # Aktueller Schritt
-            st.markdown(f"""
-            <div class="status-step active-step">
-                <span class="step-icon">▶</span> {step_num}. {step_name}
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            # Ausstehender Schritt
-            st.markdown(f"""
-            <div class="status-step pending-step">
-                <span class="step-icon">○</span> {step_num}. {step_name}
-            </div>
-            """, unsafe_allow_html=True)
     
     # Allgemeine Einstellungen
     st.divider()
@@ -1565,7 +1394,7 @@ if st.session_state.step == 1:
                                     st.session_state.profile_image_path = img_path
                                     st.session_state.temp_files.append(img_path)
                                     st.session_state.profile_image = profile_image
-                        
+                            
                         # Führerschein und Wunschgehalt
                         col1, col2 = st.columns(2)
                         with col1:
