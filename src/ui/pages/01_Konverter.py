@@ -944,7 +944,42 @@ if st.session_state.step == 1:
                     # Führerschein und Wunschgehalt
                     col1, col2 = st.columns(2)
                     with col1:
-                        edited_data["führerschein"] = st.text_input("Führerschein", value=personal_data.get("führerschein", ""))
+                        # Führerschein-Multiselect mit definierten Optionen
+                        fuehrerschein_options = [
+                            "Klasse B",
+                            "Klasse B + PKW vorhanden",
+                            "Kein Führerschein",
+                            "LKW-Führerschein",
+                            "Staplerschein"
+                        ]
+                        
+                        # Aktuellen Führerscheineintrag in Liste aufteilen, wenn er bereits existiert
+                        current_fuehrerschein = personal_data.get("führerschein", "")
+                        default_selected = []
+                        
+                        # Versuche, den aktuellen Wert den Optionen zuzuordnen
+                        if current_fuehrerschein:
+                            # Exakte Übereinstimmungen
+                            for option in fuehrerschein_options:
+                                if option in current_fuehrerschein:
+                                    default_selected.append(option)
+                            
+                            # Wenn keine Übereinstimmungen gefunden wurden, füge Default-Option hinzu
+                            if not default_selected and "Klasse B" in current_fuehrerschein:
+                                default_selected.append("Klasse B")
+                                if "PKW vorhanden" in current_fuehrerschein or "Pkw vorhanden" in current_fuehrerschein:
+                                    default_selected.append("Klasse B + PKW vorhanden")
+                        
+                        selected_fuehrerschein = st.multiselect(
+                            "Führerschein",
+                            options=fuehrerschein_options,
+                            default=default_selected,
+                            help="Mehrfachauswahl möglich"
+                        )
+                        
+                        # Konvertiere die ausgewählten Optionen in einen kommagetrennten String
+                        edited_data["führerschein"] = ", ".join(selected_fuehrerschein) if selected_fuehrerschein else ""
+                    
                     with col2:
                         edited_data["wunschgehalt"] = st.text_input("Wunschgehalt", value=profile_data.get("wunschgehalt", ""))
                     
