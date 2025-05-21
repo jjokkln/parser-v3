@@ -364,22 +364,27 @@ class ProfileGenerator:
             contact_data = personal_data.get("kontakt", {})
             ansprechpartner = contact_data.get("ansprechpartner", "")
             
-            # Bestimme die korrekte Anrede (Ausnahmebehandlung für Melike Demirkol)
-            if ansprechpartner == "Melike Demirkol":
-                anrede = f"Frau Demirkol"
-            else:
-                nachname = ansprechpartner.split()[-1] if ansprechpartner else 'Fischer'
-                anrede = f"Herr {nachname}"
-            
-            telefon = contact_data.get("telefon", "")
-            
-            # E-Mail mit Sonderbehandlung für Umlaute
-            if nachname == "Böhm":
-                email = contact_data.get("email", "boehm@galdora.de")
-            else:
-                email = contact_data.get("email", "")
-            
-            if ansprechpartner:
+            # Wenn "Kein Ansprechpartner" ausgewählt ist, überspringe diesen Abschnitt
+            if ansprechpartner and ansprechpartner != "Kein Ansprechpartner":
+                # Bestimme die korrekte Anrede (Ausnahmebehandlung für Melike Demirkol und Boehm)
+                if ansprechpartner == "Melike Demirkol":
+                    anrede = f"Frau Demirkol"
+                elif ansprechpartner == "Boehm":
+                    anrede = f"Herr Boehm"
+                    # Speziell für Boehm (ehemals Alessandro Böhm)
+                    email = contact_data.get("email", "boehm@galdora.de")
+                else:
+                    nachname = ansprechpartner.split()[-1] if ansprechpartner else 'Fischer'
+                    anrede = f"Herr {nachname}"
+                
+                telefon = contact_data.get("telefon", "")
+                
+                # E-Mail mit Sonderbehandlung für Umlaute
+                if 'nachname' in locals() and nachname == "Böhm" or ansprechpartner == "Boehm":
+                    email = contact_data.get("email", "boehm@galdora.de")
+                else:
+                    email = contact_data.get("email", "")
+                
                 doc.add_paragraph("IHR ANSPRECHPARTNER").bold = True
                 contact_para = doc.add_paragraph(ansprechpartner)
                 contact_para.paragraph_format.space_after = Pt(5)
@@ -881,127 +886,29 @@ class ProfileGenerator:
                 elements.append(Spacer(1, 0.5*cm))
                 elements.append(Paragraph("Ausbildung/ Weiterbildung", self.custom_styles['Heading2']))
                 
-                # Ausbildungen im gleichen Format wie Berufserfahrung darstellen
-                ausbildungen = profile_data.get('ausbildung', [])
-                if ausbildungen:
-                    for ausbildung in ausbildungen:
-                        try:
-                            # Zeitraum
-                            zeitraum = ausbildung.get('zeitraum', '')
-                            
-                            # Institution und Abschluss
-                            institution = ausbildung.get('institution', '')
-                            abschluss = ausbildung.get('abschluss', '')
-                            
-                            # Studienschwerpunkte
-                            schwerpunkte = ausbildung.get('schwerpunkte', '')
-                            
-                            # Rechte Spalte Inhalte
-                            right_column_content = []
-                            
-                            # Institution/Abschluss formatieren
-                            # Nicht automatisch "Studium" hinzufügen, da es sich auch um andere Ausbildungsformen handeln kann
-                            right_column_content.append(Paragraph(institution, self.custom_styles['Company']))
-                            
-                            if schwerpunkte:
-                                right_column_content.append(Paragraph(f"Studienschwerpunkte: {schwerpunkte}", self.custom_styles['Normal']))
-                            if abschluss:
-                                right_column_content.append(Paragraph(f"{abschluss}", self.custom_styles['Normal']))
-                            
-                            # Note 
-                            note = ausbildung.get('note', '')
-                            if note:
-                                right_column_content.append(Paragraph(f"Abschlussnote {note}", self.custom_styles['Normal']))
-                            
-                            # Erstelle zweispaltiges Layout mit mehr Platz für die rechte Spalte
-                            data = [[Paragraph(zeitraum, self.custom_styles['Period']), right_column_content[0]]]
-                            
-                            # Füge weitere Zeilen hinzu
-                            for i in range(1, len(right_column_content)):
-                                data.append([Paragraph('', self.custom_styles['Normal']), right_column_content[i]])
-                            
-                            # Tabelle mit definierter Breite (10% links, 75% rechts)
-                            col_widths = [A4[0] * 0.15, A4[0] * 0.65]
-                            
-                            table = Table(data, colWidths=col_widths)
-                            table.setStyle(TableStyle([
-                                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                                ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-                                ('ALIGN', (1, 0), (1, -1), 'LEFT'),
-                                ('LEFTPADDING', (1, 0), (1, -1), 2*cm),  # Ca. 2cm Einrückung für bessere Lesbarkeit
-                            ]))
-                            
-                            # Wir verpacken die Tabelle und den Spacer in KeepTogether, damit sie nicht über eine Seite verteilt werden
-                            entry_elements = [table, Spacer(1, 0.3*cm)]
-                            elements.append(KeepTogether(entry_elements))
-                        except Exception as e:
-                            print(f"Fehler bei der Verarbeitung einer Ausbildung: {str(e)}")
-                            # Einfache Darstellung als Fallback
-                            elements.append(Paragraph(f"{zeitraum} - {institution}", self.custom_styles['Normal']))
-                            elements.append(Spacer(1, 0.3*cm))
+                # Weiterbildungen
+                if profile_data.get("weiterbildungen"):
+                    for training in profile_data.get("weiterbildungen", []):
+                        # Tabelle für jede Weiterbildung
+                        train_table = doc.add_table(rows=0, cols=2)
+                        train_table.style = 'Table Grid'
+                        train_table.autofit = True
+                        
+                        # Zeitraum
+                        row_cells = train_table.add_row().cells
+                        row_cells[0].text = training.get("zeitraum", "")
+                        row_cells[0].paragraphs[0].runs[0].bold = True
+                        
+                        # Bezeichnung und Abschluss
+                        row_cells[1].text = training.get("bezeichnung", "")
+                        row_cells[1].paragraphs[0].runs[0].bold = True
+                        
+                        if training.get("abschluss"):
+                            row_cells[1].add_paragraph(training.get("abschluss", "")).italic = True
+                        
+                        doc.add_paragraph()  # Leerzeile
                 else:
-                    elements.append(Paragraph("Keine Ausbildung angegeben", self.custom_styles['Normal']))
-                
-                # Trennlinie zwischen Ausbildung und Weiterbildungen
-                elements.append(Spacer(1, 0.5*cm))
-                elements.append(HRFlowable(width="100%", thickness=0.5, lineCap='round', color=colors.lightgrey, spaceBefore=0.3*cm, spaceAfter=0.3*cm))
-                
-                # Fort- und Weiterbildungen Überschrift
-                elements.append(Paragraph("Fort- und Weiterbildungen", self.custom_styles['Heading2']))
-                
-                # Weiterbildungen im gleichen Format wie Berufserfahrung darstellen
-                weiterbildungen = profile_data.get('weiterbildungen', [])
-                if weiterbildungen:
-                    for weiterbildung in weiterbildungen:
-                        try:
-                            # Zeitraum
-                            zeitraum = weiterbildung.get('zeitraum', '')
-                            
-                            # Bezeichnung und Abschluss
-                            bezeichnung = weiterbildung.get('bezeichnung', '')
-                            abschluss = weiterbildung.get('abschluss', '')
-                            
-                            # Rechte Spalte Inhalte
-                            right_column_content = []
-                            
-                            # Formatieren wie im Design
-                            if "zum" in bezeichnung or "zur" in bezeichnung:
-                                right_column_content.append(Paragraph(f"Fortbildung {bezeichnung}", self.custom_styles['Company']))
-                            else:
-                                right_column_content.append(Paragraph(f"Fortbildung zum {bezeichnung}", self.custom_styles['Company']))
-                            
-                            # Abschluss nur anzeigen, wenn nicht leer und nicht bereits in Bezeichnung enthalten
-                            if abschluss and abschluss not in bezeichnung:
-                                right_column_content.append(Paragraph(f"{abschluss}", self.custom_styles['Normal']))
-                            
-                            # Erstelle zweispaltiges Layout mit mehr Platz für die rechte Spalte
-                            data = [[Paragraph(zeitraum, self.custom_styles['Period']), right_column_content[0]]]
-                            
-                            # Füge weitere Zeilen hinzu
-                            for i in range(1, len(right_column_content)):
-                                data.append([Paragraph('', self.custom_styles['Normal']), right_column_content[i]])
-                            
-                            # Tabelle mit definierter Breite (10% links, 75% rechts)
-                            col_widths = [A4[0] * 0.15, A4[0] * 0.65]
-                            
-                            table = Table(data, colWidths=col_widths)
-                            table.setStyle(TableStyle([
-                                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                                ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-                                ('ALIGN', (1, 0), (1, -1), 'LEFT'),
-                                ('LEFTPADDING', (1, 0), (1, -1), 2*cm),  # Ca. 2cm Einrückung für bessere Lesbarkeit
-                            ]))
-                            
-                            # Wir verpacken die Tabelle und den Spacer in KeepTogether, damit sie nicht über eine Seite verteilt werden
-                            entry_elements = [table, Spacer(1, 0.3*cm)]
-                            elements.append(KeepTogether(entry_elements))
-                        except Exception as e:
-                            print(f"Fehler bei der Verarbeitung einer Weiterbildung: {str(e)}")
-                            # Einfache Darstellung als Fallback
-                            elements.append(Paragraph(f"{zeitraum} - {bezeichnung}", self.custom_styles['Normal']))
-                            elements.append(Spacer(1, 0.3*cm))
-                else:
-                    elements.append(Paragraph("Keine Weiterbildungen angegeben", self.custom_styles['Normal']))
+                    doc.add_paragraph("Keine Weiterbildungen angegeben", style='Normal')
                 
                 # Footer mit GALDORA Kontaktinformationen für beide Templates
                 elements.append(Spacer(1, 1.5*cm))
@@ -1122,37 +1029,51 @@ class ProfileGenerator:
             elements.append(Paragraph(name, self.custom_styles['Name']))
             
             # Ansprechpartner Block mit IHR ANSPRECHPARTNER und den entsprechenden Informationen
-            elements.append(Paragraph("IHR ANSPRECHPARTNER", self.custom_styles['ContactHeader']))
-            
-            # Kontaktinformationen
             kontakt = personal_data.get('kontakt', {})
             ansprechpartner = kontakt.get('ansprechpartner', '')
             
-            # Bestimme die korrekte Anrede (Ausnahmebehandlung für Melike Demirkol)
-            if ansprechpartner == "Melike Demirkol":
-                anrede = f"Frau Demirkol"
-            else:
-                nachname = ansprechpartner.split()[-1] if ansprechpartner else 'Fischer'
-                anrede = f"Herr {nachname}"
-            
-            telefon = kontakt.get('telefon', '02161 62126-02')
-            
-            # Email-Adresse mit Sonderbehandlung für Umlaute
-            if nachname == "Böhm":
-                email = kontakt.get('email', "boehm@galdora.de")
-            else:
-                email = kontakt.get('email', f"{nachname.lower()}@galdora.de")
+            # Wenn "Kein Ansprechpartner" ausgewählt ist, überspringe diesen Abschnitt
+            if ansprechpartner and ansprechpartner != "Kein Ansprechpartner":
+                elements.append(Paragraph("IHR ANSPRECHPARTNER", self.custom_styles['ContactHeader']))
                 
-            # Erstelle Layout für Ansprechpartner
-            elements.append(Paragraph(anrede, self.custom_styles['ContactData']))
-            elements.append(Paragraph(f"{telefon}", self.custom_styles['ContactData']))
-            elements.append(Paragraph(f"{email}", self.custom_styles['ContactData']))
-            
-            # Horizontale Linie nach Ansprechpartner mit etwas Abstand
-            elements.append(Spacer(1, 0.5*cm))
-            elements.append(HRFlowable(width="100%", thickness=1, lineCap='round', color=colors.lightgrey))
-            elements.append(Spacer(1, 0.5*cm))
+                # Bestimme die korrekte Anrede (Ausnahmebehandlung für Melike Demirkol und Boehm)
+                if ansprechpartner == "Melike Demirkol":
+                    anrede = f"Frau Demirkol"
+                elif ansprechpartner == "Boehm":
+                    anrede = f"Herr Boehm"
+                    # Speziell für Boehm (ehemals Alessandro Böhm)
+                    email = kontakt.get('email', "boehm@galdora.de")
+                else:
+                    nachname = ansprechpartner.split()[-1] if ansprechpartner else 'Fischer'
+                    anrede = f"Herr {nachname}"
                 
+                telefon = kontakt.get('telefon', '')
+                
+                # E-Mail mit Sonderbehandlung für Umlaute
+                if 'nachname' in locals() and nachname == "Böhm" or ansprechpartner == "Boehm":
+                    email = kontakt.get('email', "boehm@galdora.de")
+                else:
+                    email = kontakt.get('email', "")
+                
+                # Erstelle Layout für Ansprechpartner
+                elements.append(Paragraph(ansprechpartner, self.custom_styles['ContactData']))
+                
+                if telefon:
+                    elements.append(Paragraph(f"Tel.: {telefon}", self.custom_styles['ContactData']))
+                
+                if email:
+                    elements.append(Paragraph(f"E-Mail: {email}", self.custom_styles['ContactData']))
+                
+                # Horizontale Linie nach Ansprechpartner mit etwas Abstand
+                elements.append(Spacer(1, 8))
+                elements.append(HRFlowable(
+                    width="100%",
+                    thickness=0.5,
+                    color=colors.grey,
+                    spaceBefore=5,
+                    spaceAfter=8
+                ))
+            
             # Persönliche Informationen
             elements.append(Paragraph(f"Wohnort: {personal_data.get('wohnort', '')}", self.custom_styles['LabelInline']))
             elements.append(Paragraph(f"Jahrgang: {personal_data.get('jahrgang', '')}", self.custom_styles['LabelInline']))
