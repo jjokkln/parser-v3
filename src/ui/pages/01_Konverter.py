@@ -1023,7 +1023,7 @@ if st.session_state.step == 1:
                         "Kai Fischer", 
                         "Melike Demirkol", 
                         "Konrad Ruszczyk", 
-                        "Boehm", 
+                        "Alessandro Boehm", 
                         "Salim Alizai",
                         "Kein Ansprechpartner"
                     ]

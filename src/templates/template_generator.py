@@ -133,6 +133,9 @@ class ProfileGenerator:
             # Erstelle ein neues Word-Dokument
             doc = docx.Document()
             
+            # Initialisiere die elements-Liste
+            elements = []
+            
             # Seiteneinstellungen (A4)
             section = doc.sections[0]
             section.page_width = Cm(21)
@@ -344,6 +347,7 @@ class ProfileGenerator:
                         # Tabelle mit definierter Breite (15% links, 65% rechts)
                         col_widths = [A4[0] * 0.15, A4[0] * 0.65]
                         
+                        # Hier wird train_table mit Table erstellt (nicht mit doc.add_table)
                         train_table = Table(data, colWidths=col_widths)
                         train_table.setStyle(TableStyle([
                             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
@@ -372,10 +376,12 @@ class ProfileGenerator:
             elements.append(Paragraph(footer_text, self.custom_styles['Footer']))
             
             return elements
-            
         except Exception as e:
-            print(f"Fehler bei der DOCX-Generierung: {str(e)}")
-            raise
+            print(f"Fehler bei der Erstellung der Dokumentelemente: {str(e)}")
+            # Einfache Elemente als Fallback
+            elements.append(Paragraph("FEHLER BEI DER ERSTELLUNG DES PROFILS", self.styles['Title']))
+            elements.append(Paragraph(f"Details: {str(e)}", self.styles['Normal']))
+        return elements
     
     def _create_custom_styles(self):
         """Erstellt benutzerdefinierte Stile für das Dokument"""
@@ -857,6 +863,7 @@ class ProfileGenerator:
                             # Tabelle mit definierter Breite (15% links, 65% rechts)
                             col_widths = [A4[0] * 0.15, A4[0] * 0.65]
                             
+                            # Hier wird train_table mit Table erstellt (nicht mit doc.add_table)
                             train_table = Table(data, colWidths=col_widths)
                             train_table.setStyle(TableStyle([
                                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),
@@ -873,9 +880,6 @@ class ProfileGenerator:
                             # Einfache Darstellung als Fallback
                             elements.append(Paragraph(f"{zeitraum} - {bezeichnung}", self.custom_styles['Normal']))
                             elements.append(Spacer(1, 0.3*cm))
-                else:
-                    elements.append(Paragraph("Keine Weiterbildungen angegeben", self.custom_styles['Normal']))
-            
             else:  # Classic Template (default)
                 # Ensure we have personal_data initialized at the start
                 personal_data = profile_data.get('persönliche_daten', {})
